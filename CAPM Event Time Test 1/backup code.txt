@@ -1,0 +1,15 @@
+"""
+def calculate_exponential_fit(x, lin_reg):
+    # Reshape x for sklearn if it's a 1-D array
+    if x.ndim == 1:
+        x = x.reshape(-1, 1)
+    
+    # Predict the log of y using the linear regression model
+    y_log_pred = lin_reg.predict(x)
+    
+    # Return the exponential of the prediction to get back to the original scale
+    return np.exp(y_log_pred)
+
+# Calculate the predicted y values for the new x values
+predicted_y_values = calculate_exponential_fit(x_data, lin_reg)
+normalized_trading = np.divide(y_data,predicted_y_values) """
