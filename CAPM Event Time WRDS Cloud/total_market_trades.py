@@ -160,9 +160,24 @@ def get_event_month_blocks():
 
     ########
     #plt.show()
-    print(new_blocks)
+    #print(new_blocks)
     first_last_pairs_array_event_months = np.empty(num_events, dtype=object)
+    first_last_pairs_time_months = []
 
+    for month in data['month'].unique():
+        # Filtering the data for the current month
+        monthly_data = data[data['date'].dt.to_period('M') == month]
+        
+        # Getting the first and last date of the month
+        #first_date = monthly_data['date'].iloc[0].strftime('%Y-%m-%d')
+        #last_date = monthly_data['date'].iloc[-1].strftime('%Y-%m-%d')
+        first_date = monthly_data['date'].iloc[0]
+        last_date = monthly_data['date'].iloc[-1]
+
+        # Adding the pair to the list
+        first_last_pairs_time_months.append([first_date, last_date])
+
+    #data['date'] = data['date'].dt.strftime('%Y-%m-%d')
 # Iterating through the events to get the pairs
     for i in range(num_events):
         # Getting the first date for the current block
@@ -174,20 +189,9 @@ def get_event_month_blocks():
         # Storing the pair in the array
         first_last_pairs_array_event_months[i] = [first_date, last_date]
     
-    first_last_pairs_time_months = []
-
-    for month in data['month'].unique():
-        # Filtering the data for the current month
-        monthly_data = data[data['date'].dt.to_period('M') == month]
-        
-        # Getting the first and last date of the month
-        first_date = monthly_data['date'].iloc[0]
-        last_date = monthly_data['date'].iloc[-1]
-
-        # Adding the pair to the list
-        first_last_pairs_time_months.append([first_date, last_date])
+    
 
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
     
-    return first_last_pairs_array_event_months, first_last_pairs_array_time_months, data['date'].tolist()
+    return first_last_pairs_array_event_months, first_last_pairs_array_time_months
