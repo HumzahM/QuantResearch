@@ -3,9 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression 
-import statsmodels.api as sm
-from statsmodels.regression.rolling import RollingOLS
-from sklearn.metrics import r2_score
 import pickle
 import os
 
@@ -146,7 +143,7 @@ def get_event_month_blocks():
             event_month_lengths[counter] = othercounter
             counter += 1
             othercounter = 0
-            plt.axvline(x=i, color='b', linestyle='--')
+            
     #last one is end 
     new_blocks[-1] = normalized_trading_scaled.size-1
     event_month_lengths[-1] = num_events*normalized_days_per_month - np.sum(event_month_lengths[:-1])
@@ -181,7 +178,6 @@ def get_event_month_blocks():
         first_last_pairs_array_event_months[i] = [first_date, last_date]
     
     
-
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
     

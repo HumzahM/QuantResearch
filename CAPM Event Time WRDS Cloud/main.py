@@ -37,7 +37,7 @@ def calculate_beta(y, x):
 def fetch_stock_data(start_date, end_date):
     # Define the pickle file path
     pickle_file = 'stock_data.pickle'
-    num_stocks = 100 #should be 500 later
+    num_stocks = 20 #should be 500 later
 
     # Prepare the query
     query = f"""
@@ -153,15 +153,6 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
                     'sp500_return_range2': [sp500_return2]
                 })
                 final_results = pd.concat([final_results, row], ignore_index=True)
-            # else:
-            #     print("skipping")
-            #     print(start1)
-            #     print(end1)
-            #     print(start2)
-            #     print(end2)
-            #     print(first_date_permno)
-            #     print(last_date_permno)
-            #     print("-------------------")
     return final_results
 
 def calculate_kurtosis_skew(final_results):
@@ -241,8 +232,6 @@ def calculate_betas_and_price_of_beta(monthly_returns):
     monthly_returns['beta_range1'] = np.nan
     monthly_returns['beta_range2'] = np.nan
     counter = 1
-
-    beta_range1_graph, beta_range1_test_graph, beta_range2_graph, beta_range2_test_graph = [], [], [], []
     
     for permno in unique_permnos:
         print(counter)
@@ -256,48 +245,45 @@ def calculate_betas_and_price_of_beta(monthly_returns):
                 y_range1 = data_permno['equity_returns_range1'].iloc[i-60:i]
                 x_range1 = data_permno['sp500_return_range1'].iloc[i-60:i]
                 beta_range1 = calculate_beta(y_range1, x_range1)
-                # print(data_permno.index[i])
-                # print(i)
-                # print(monthly_returns.loc[data_permno.index[i]])
                 monthly_returns.loc[data_permno.index[i], 'beta_range1'] = beta_range1
-                # print(monthly_returns.loc[data_permno.index[i]])
 
                 y_range2 = data_permno['equity_returns_range2'].iloc[i-60:i]
                 x_range2 = data_permno['sp500_return_range2'].iloc[i-60:i]
                 beta_range2 = calculate_beta(y_range2, x_range2)
                 monthly_returns.loc[data_permno.index[i], 'beta_range2'] = beta_range2
-    
-    plt.plot(beta_range1_graph, label="beta 1")
-    plt.plot(beta_range1_test_graph, label="beta 1 test")
-    plt.plot(beta_range2_graph, label="beta 2")
-    plt.plot(beta_range2_test_graph, label="beta 2 test")
-    plt.legend()
-    plt.savefig("beta.png")
+
     price_of_beta_range1, price_of_beta_range2 = [], []
 
-    monthly_returns_filtered = monthly_returns[monthly_returns['sequence #'] >= 6]
-    monthly_returns_filtered = monthly_returns_filtered.dropna(subset=['beta_range1', 'beta_range2'])
-    #print(monthly_returns_filtered)
+    monthly_returns_filtered = monthly_returns.dropna(subset=['beta_range1', 'beta_range2'])
     unique_sequences = monthly_returns_filtered['sequence #'].unique()
-    #print("unique sequences: " + str(len(unique_sequences)))
     for seq in unique_sequences:
-        data_seq = monthly_returns[monthly_returns['sequence #'] == seq].dropna(subset=['beta_range1', 'beta_range2'])
-        
-        # For range 1
-        x_range1 = data_seq['beta_range1']
-        y_range1 = data_seq['equity_returns_range1']
-        #weights = data_seq['market cap']
-        price_of_beta_1 = calculate_beta(y_range1, x_range1)
-        #price_of_beta_1 = calculate_weighted_beta(y_range1, x_range1, weights)
-        price_of_beta_range1.append(price_of_beta_1)
+        if(seq % 12 == 1 and seq > 12):
+            data_seq = monthly_returns[monthly_returns['sequence #'].isin(monthly_returns['sequence #'].unique()[:12])]
+            print(data_seq)
+            data_seq = data_seq.dropna(subset=['beta_range1', 'beta_range2'])
+            print(data_seq)
+            # For range 1
+            x_range1 = data_seq.groupby('permno')['beta_range1'].mean()
+            print(x_range1)
+            print(x_range1[~np.isnan(x_range1)])
+            print("-------------------")
+            y_range1 = data_seq.groupby('permno')['equity_returns_range1'].sum()
+            price_of_beta_1 = calculate_beta(y_range1[~np.isnan(y_range1)], x_range1[~np.isnan(x_range1)])
+            print(price_of_beta_1)
+            if(price_of_beta_1.isna()):
+                print("nan")
+            else:
+                price_of_beta_range1.append(price_of_beta_1)
 
-        # For range 2
-        x_range2 = data_seq['beta_range2']
-        y_range2 = data_seq['equity_returns_range2']
-        #weights = data_seq['market cap']
-        price_of_beta_2 = calculate_beta(y_range2, x_range2)
-        #price_of_beta_2 = calculate_weighted_beta(y_range2, x_range2, weights)
-        price_of_beta_range2.append(price_of_beta_2)
+            # For range 2
+            x_range2 = data_seq.groupby('permno')['beta_range2'].mean()
+            y_range2 = data_seq.groupby('permno')['equity_returns_range2'].sum()
+            price_of_beta_2 = calculate_beta(y_range2[~np.isnan(y_range2)], x_range2[~np.isnan(x_range2)])
+            if(price_of_beta_2.isna()):
+                print("nan")
+            else:
+                price_of_beta_range2.append(price_of_beta_2)
+
     avg_range1 = sum(price_of_beta_range1) / len(price_of_beta_range1)
     avg_range2 = sum(price_of_beta_range2) / len(price_of_beta_range2)
     
@@ -315,15 +301,12 @@ print("running")
 
 stocks = fetch_stock_data('1990-01-01', '2021-12-30')
 print("stocks fetched")
-print(stocks[stocks.isna().any(axis=1)])
 
 monthly_day_ranges, event_month_ranges = total_market_trades.get_event_month_blocks()
 print("ranges calculated")
 
 monthly_returns = calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
 print("monthly returns calculated")
-#print(monthly_returns)
-print(monthly_returns[monthly_returns.isna().any(axis=1)])
 
 calculate_kurtosis_skew(monthly_returns)
 calculate_betas_and_price_of_beta(monthly_returns)
