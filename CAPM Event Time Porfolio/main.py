@@ -22,7 +22,6 @@ market_returns = pd.read_csv('msft test data.csv')
 market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
 market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
 market_returns['log sp500 returns'] = np.log(1+market_returns['sprtrn'] - market_returns['rf'])
-print(np.sum(market_returns['log sp500 returns'][0:250]))
 
 #for beta, y is stock return (dependant) and x is market return (independant)
 def calculate_beta(y, x):
@@ -37,7 +36,7 @@ def calculate_beta(y, x):
 def fetch_stock_data(start_date, end_date):
     # Define the pickle file path
     pickle_file = 'stock_data.pickle'
-    num_stocks = 100 #should be 500 later
+    num_stocks = 500 #should be 500 later
 
     # Prepare the query
     query = f"""
@@ -226,22 +225,30 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
             spreturns1.append(sp500ret1)
             spreturns2.append(sp500ret2)
 
-    print("Porfolios Made")
+    print("Portfolios Made")
     betas1 = []
     means1 = []
     betas2 = []
     means2 = []
+    skews1 = []
+    skews2 = []
+    kurtosis1 = []
+    kurtosis2 = []
 
     for point in portfolio_range1:
         beta = calculate_beta(point, spreturns1)
         betas1.append(beta)
         means1.append(np.mean(point))
+        skews1.append(skew(point))
+        kurtosis1.append(kurtosis(point))
 
 
     for point in portfolio_range2:
         beta = calculate_beta(point, spreturns2)
         betas2.append(beta)
         means2.append(np.mean(point))
+        skews2.append(skew(point))
+        kurtosis2.append(kurtosis(point))
 
     plt.scatter(betas1, means1, color='blue')
     plt.scatter(betas2, means2, color='red')
@@ -267,17 +274,52 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
     print(calculate_beta(means1, betas1))
     print(calculate_beta(means2, betas2))
 
+    avg_kurtosis1 = sum(kurtosis1) / len(kurtosis1)
+    avg_kurtosis2 = sum(kurtosis2) / len(kurtosis2)
+    avg_skews1 = sum(skews1) / len(skews1)
+    avg_skews2 = sum(skews2) / len(skews2)
+
+    # Perform t-test on the results of the two methods
+    t_stat_kurtosis, p_value_kurtosis = ttest_ind(kurtosis1, kurtosis2)
+    t_stat_skew, p_value_skew = ttest_ind(skews1, skews2)
+
+    # Print results
+    print(f"Average Kurtosis for Range 1: {avg_kurtosis1}")
+    print(f"Average Kurtosis for Range 2: {avg_kurtosis2}")
+    print(f"Average Skew for Range 1: {avg_skews1}")
+    print(f"Average Skew for Range 2: {avg_skews2}")
+    print(f"T-statistic for Kurtosis: {t_stat_kurtosis}, P-value for Kurtosis (One Tailed): {p_value_kurtosis/2}")
+    print(f"T-statistic for Skew: {t_stat_skew}, P-value for Skew (One Tailed): {p_value_skew/2}")
+
+rerunMonthlyReturns = True
 
 print("running")
 
-stocks = fetch_stock_data('1990-01-01', '2021-12-30')
-print("stocks fetched")
+if rerunMonthlyReturns:
+    event_month_ranges, monthly_day_ranges = total_market_trades.get_event_month_blocks()
+    print("ranges calculated")
 
-monthly_day_ranges, event_month_ranges = total_market_trades.get_event_month_blocks()
-print("ranges calculated")
+    stocks = fetch_stock_data('1990-01-01', '2021-12-30')
+    print("stocks fetched")
 
-monthly_returns, spr_returns = calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
-print("monthly returns calculated")
+    monthly_returns, spr_returns = calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
+    print("monthly returns calculated")
+
+    with open('final_results.pickle', 'wb') as f:
+        pickle.dump(monthly_returns, f)
+
+    # Save spr_returns to a pickle file
+    with open('spr_returns.pickle', 'wb') as f:
+        pickle.dump(spr_returns, f)
+
+else:
+    # Load monthly_returns from a pickle file
+    with open('final_results.pickle', 'rb') as f:
+        monthly_returns = pickle.load(f)
+
+    # Load spr_returns from a pickle file
+    with open('spr_returns.pickle', 'rb') as f:
+        spr_returns = pickle.load(f)
 
 calculate_betas_and_price_of_beta(monthly_returns, spr_returns)
 

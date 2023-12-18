@@ -84,15 +84,20 @@ def get_event_month_blocks():
     data['monthly avg trade'] = data.groupby("month")['total daily trades'].transform('mean')
 
     # Applying the function to a single column of the DataFrame
-    window_size = 1512  # Change this value as needed
+    window_size = 2520  # Change this value as needed
     data['trading moving average'] = np.exp(symmetric_smoothing(np.log(data['total daily trades']), window_size, method='average'))
-    data['trading moving median'] = symmetric_smoothing(data['total daily trades'], window_size, method='average')
+    data['trading moving average no log'] = symmetric_smoothing(data['total daily trades'], window_size, method='average')
 
     data = data[data['date'] <= end_date]
     data = data[data['date'] >= start_date].reset_index(drop=True)
 
-    plt.plot(data[['trading moving average']], color='red', label='Front and Back Mean')
-    plt.plot(data[['trading moving median']], color='yellow', label='Front and Back Median')
+    plt.plot(data[['trading moving average']], color='red', label='Front and Back Mean Using Log')
+    plt.plot(data[['trading moving average no log']], color='yellow', label='Front and Back Mean Not Using Log')
+    plt.legend()
+    y_data = data['monthly avg trade']
+    x_data = np.arange(1, y_data.shape[0]+1, 1).reshape(-1,1)
+    plt.scatter(x_data, y_data)
+    plt.savefig("trades.png")
 
     y_data = data['monthly avg trade']
     y_data_log = np.log(y_data)
@@ -113,16 +118,17 @@ def get_event_month_blocks():
 
     plt.title(STOCK_NAME + " number daily trades" + str(window_size) + " window size ")
     plt.legend()
+    plt.figure()
 
     normalized_trading = (y_data / y_model).to_numpy()
 
-    trading_moving_average = (data['total daily trades'] / data['trading moving average']).to_numpy()
+    trading_moving_average_with_log = (data['total daily trades'] / data['trading moving average']).to_numpy()
 
-    trading_moving_median = (data['total daily trades'] / data['trading moving median']).to_numpy()
+    trading_moving_average_with_log_without_log = (data['total daily trades'] / data['trading moving average no log']).to_numpy()
 
     normalized_trading_scaled = normalized_trading * normalized_trading.shape[0]/np.sum(normalized_trading)
-    normalized_trading_scaled_2 = trading_moving_average * trading_moving_average.shape[0]/np.sum(trading_moving_average)
-    normalized_trading_scaled_3 = trading_moving_median * trading_moving_median.shape[0]/np.sum(trading_moving_median)
+    normalized_trading_scaled_2 = trading_moving_average_with_log * trading_moving_average_with_log.shape[0]/np.sum(trading_moving_average_with_log)
+    normalized_trading_scaled_3 = trading_moving_average_with_log_without_log * trading_moving_average_with_log_without_log.shape[0]/np.sum(trading_moving_average_with_log_without_log)
 
     """PICK WHICH ONE I WANT -> no comment, exponential, #2, average, #3, median"""
     normalized_trading_scaled = normalized_trading_scaled_2 #mean
@@ -147,8 +153,6 @@ def get_event_month_blocks():
     #last one is end 
     new_blocks[-1] = normalized_trading_scaled.size-1
     event_month_lengths[-1] = num_events*normalized_days_per_month - np.sum(event_month_lengths[:-1])
-    plt.savefig("total_market_trades.png")
-    plt.figure()
     first_last_pairs_array_event_months = np.empty(num_events, dtype=object)
     first_last_pairs_time_months = []
 
@@ -157,10 +161,10 @@ def get_event_month_blocks():
         monthly_data = data[data['date'].dt.to_period('M') == month]
         
         # Getting the first and last date of the month
-        #first_date = monthly_data['date'].iloc[0].strftime('%Y-%m-%d')
-        #last_date = monthly_data['date'].iloc[-1].strftime('%Y-%m-%d')
-        first_date = monthly_data['date'].iloc[0]
-        last_date = monthly_data['date'].iloc[-1]
+        first_date = monthly_data['date'].iloc[0].strftime('%Y-%m-%d')
+        last_date = monthly_data['date'].iloc[-1].strftime('%Y-%m-%d')
+        #first_date = monthly_data['date'].iloc[0]
+        #last_date = monthly_data['date'].iloc[-1]
 
         # Adding the pair to the list
         first_last_pairs_time_months.append([first_date, last_date])
