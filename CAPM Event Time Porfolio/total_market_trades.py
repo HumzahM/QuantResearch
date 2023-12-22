@@ -57,7 +57,7 @@ def symmetric_smoothing(series, window, method='average'):
 
     return results
 
-def get_event_month_blocks():
+def get_event_month_blocks(window_size):
     start_date_data = '1987-01-01'
     start_date = '1990-01-01'
     end_date_data = '2021-12-30'
@@ -84,7 +84,6 @@ def get_event_month_blocks():
     data['monthly avg trade'] = data.groupby("month")['total daily trades'].transform('mean')
 
     # Applying the function to a single column of the DataFrame
-    window_size = 2520  # Change this value as needed
     data['trading moving average'] = np.exp(symmetric_smoothing(np.log(data['total daily trades']), window_size, method='average'))
     data['trading moving average no log'] = symmetric_smoothing(data['total daily trades'], window_size, method='average')
 

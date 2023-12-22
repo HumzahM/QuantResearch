@@ -11,6 +11,7 @@ from scipy.stats import kurtosis, skew
 from scipy.stats import ttest_ind
 import random
 import pandas as pd
+import statsmodels.api as sm
 
 
 start_date = '1990-01-01'
@@ -25,6 +26,7 @@ market_returns['log sp500 returns'] = np.log(1+market_returns['sprtrn'] - market
 
 #for beta, y is stock return (dependant) and x is market return (independant)
 def calculate_beta(y, x):
+    
     y = np.array(y)
     x = np.array(x)
     covariance = np.cov(y, x)[0, 1]
@@ -32,11 +34,14 @@ def calculate_beta(y, x):
     beta = covariance / variance
     return beta
 
+def calculate_beta_force(y, x):
+    return sm.OLS(y, x).fit().params[0]
+
 
 def fetch_stock_data(start_date, end_date):
     # Define the pickle file path
     pickle_file = 'stock_data.pickle'
-    num_stocks = 500 #should be 500 later
+    num_stocks = 100 #should be 500 later
 
     # Prepare the query
     query = f"""
@@ -140,10 +145,7 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
 
                 monthly_return1 = filtered_stock_data1['log equity returns'].sum()
                 monthly_return2 = filtered_stock_data2['log equity returns'].sum()
-
-                sp500_return1 = sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['log sp500 returns'].sum()
-                sp500_return2 = sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['log sp500 returns'].sum()
-
+                
                 row = pd.DataFrame({
                     'sequence #': [i], 
                     'permco': [permco], 
@@ -170,15 +172,6 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
     print(spr_returns)
     return final_results, spr_returns
 
-def calculate_beta(y, x):
-    y = np.array(y)
-    x = np.array(x)
-    covariance_matrix = np.cov(y, x)
-    covariance = covariance_matrix[0, 1]
-    variance = np.var(x)
-    beta = covariance / variance
-    return beta
-
 def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
     unique_sequences = monthly_returns['sequence #'].unique()
     portfolio_range1 = [[] for _ in range(10)]
@@ -196,9 +189,9 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
             # Group by 'permco' and filter out any group that doesn't have exactly 72 points
             valid_data = sorted_data.groupby('permco').filter(lambda x: len(x) == 72)
             # Group by 'permco' again and calculate the beta for each group
-            betas1 = valid_data.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns_range1'][0:60], x['sp500_return_range1'][0:60]))
+            betas1 = valid_data.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns_range1'][0:60], x['sp500_return_range1'][0:60]))
             returns1 = valid_data.groupby('permco').apply(lambda x: np.sum(x['equity_returns_range1'][60:]))
-            betas2 = valid_data.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns_range2'][0:60], x['sp500_return_range2'][0:60]))
+            betas2 = valid_data.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns_range2'][0:60], x['sp500_return_range2'][0:60]))
             returns2 = valid_data.groupby('permco').apply(lambda x: np.sum(x['equity_returns_range2'][60:]))
             market_caps1 = valid_data.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
             market_caps1.fillna(0, inplace=True)
@@ -216,14 +209,23 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
                 group1_indices = betas1_grouped[betas1_grouped == i].index
                 group2_indices = betas2_grouped[betas2_grouped == i].index
                     
-                portfolio_range1[i].append(np.average(returns1[group1_indices], weights=market_caps1[group1_indices]))
-                portfolio_range2[i].append(np.average(returns2[group2_indices], weights=market_caps2[group2_indices]))
+                #portfolio_range1[i].append(np.average(returns1[group1_indices], weights=market_caps1[group1_indices]))
+                #portfolio_range2[i].append(np.average(returns2[group2_indices], weights=market_caps2[group2_indices]))
+                portfolio_range1[i].append(np.average(returns1[group1_indices]))
+                portfolio_range2[i].append(np.average(returns2[group2_indices]))
 
             relevant_sp_data = spr_returns[spr_returns['sequence #'].isin(range(seq-11,seq+1))]
             sp500ret1 = np.sum(relevant_sp_data["sp500_return_range1"])
+            #convert sp500ret1 to simple return from log return
             sp500ret2 = np.sum(relevant_sp_data["sp500_return_range2"])
             spreturns1.append(sp500ret1)
             spreturns2.append(sp500ret2)
+
+            # sp500ret1 = np.exp(sp500ret1) - 1
+            # sp500ret2 = np.exp(sp500ret2) - 1
+
+            # print("risk adjusted return of sp500 is: " + str(seq/12) + " " + str(sp500ret1))
+            # print("risk adjusted return of sp500 (event year) is: " + str(sp500ret2))
 
     print("Portfolios Made")
     betas1 = []
@@ -236,7 +238,7 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
     kurtosis2 = []
 
     for point in portfolio_range1:
-        beta = calculate_beta(point, spreturns1)
+        beta = calculate_beta_force(point, spreturns1)
         betas1.append(beta)
         means1.append(np.mean(point))
         skews1.append(skew(point))
@@ -244,17 +246,25 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
 
 
     for point in portfolio_range2:
-        beta = calculate_beta(point, spreturns2)
+        beta = calculate_beta_force(point, spreturns2)
         betas2.append(beta)
         means2.append(np.mean(point))
         skews2.append(skew(point))
         kurtosis2.append(kurtosis(point))
 
+    betas3 = []
+    betas3.append(1)
+    betas3.append(1)
+    means3 = []
+    means3.append(np.mean(spreturns1))
+    means3.append(np.mean(spreturns2))
+
     plt.scatter(betas1, means1, color='blue')
     plt.scatter(betas2, means2, color='red')
+    plt.scatter(betas3, means3, color='green')
     plt.xlabel('Beta')
     plt.ylabel('Mean Return')
-    plt.title('Beta vs Mean Return')
+    plt.title('Beta vs Mean Return (Blue is Normal Months, Red is Event Months)')
     plt.savefig("beta_vs_mean_return.png")
 
     # Create a dictionary with the variables
@@ -269,7 +279,10 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
     df = pd.DataFrame(data)
 
     # Save the DataFrame to a CSV file
-    df.to_csv('output.csv', index=False)
+    try:
+        df.to_csv('output.csv', index=False)
+    except:
+        print("Error writing to CSV file.")
 
     print(calculate_beta(means1, betas1))
     print(calculate_beta(means2, betas2))
@@ -291,12 +304,12 @@ def calculate_betas_and_price_of_beta(monthly_returns, spr_returns):
     print(f"T-statistic for Kurtosis: {t_stat_kurtosis}, P-value for Kurtosis (One Tailed): {p_value_kurtosis/2}")
     print(f"T-statistic for Skew: {t_stat_skew}, P-value for Skew (One Tailed): {p_value_skew/2}")
 
-rerunMonthlyReturns = True
+rerunMonthlyReturns = False
 
 print("running")
 
 if rerunMonthlyReturns:
-    event_month_ranges, monthly_day_ranges = total_market_trades.get_event_month_blocks()
+    event_month_ranges, monthly_day_ranges = total_market_trades.get_event_month_blocks(window_size=150)
     print("ranges calculated")
 
     stocks = fetch_stock_data('1990-01-01', '2021-12-30')
