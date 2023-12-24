@@ -1,4 +1,4 @@
-This is a collection of projects I am doing as Quant Research with a professors
+This is a collection of projects I am doing as Quant Research with professor Dr. Larry Harris at USC 
 
 Helper Libraries contains some functions that I use in every part
 Advanced Fetch Stock Data.py pulls the N largest stocks by market cap from start to end year and combines them (Set to 500, 1990, 2019 usually)
