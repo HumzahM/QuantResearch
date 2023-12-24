@@ -9,6 +9,6 @@ CAPM Event Time Test 1 is a Jupyter Notebook that tests the basic idea of calcul
 CAPM Event Time WRDS Cloud is attempting to calculate the "price of beta." If the price of beta is positive then that means risk is priced in the market
 
 CAPM Event Time Portfolio replicates the Black Jensen Scholes 1972 portfolio/CAPM study. 
-**Right now it demonstrates that there is evidence of less skew/kurtosis among the whole portfolio and much less noise in expected returns **
+**Right now it demonstrates that there is evidence of less skew/kurtosis among the whole portfolio and much less noise in expected returns**
 
 CAPM Event Time Individual Skew Kurtosis is to test skew and kurtosis on calculating a stock's own "event months" rather then market level event months. Pretty sure this file is messed up right now 
