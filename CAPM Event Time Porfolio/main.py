@@ -19,6 +19,7 @@ sys.path.append(parent_dir)
 from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
+from Return_Dispersion.return_dispersion import get_event_blocks_return_dispersion
 
 start_date = '1990-01-01'
 end_date = '2019-12-31'
@@ -226,7 +227,7 @@ end_year = 2019
 n_stocks = 500
 
 # Rerun flag
-rerunMonthlyReturns = False
+rerunMonthlyReturns = True
 
 # Directory for storing pickle files
 data_directory = 'data'
@@ -240,7 +241,8 @@ try:
     if rerunMonthlyReturns or not (os.path.exists(monthly_returns_filename) and os.path.exists(spr_returns_filename)):
         print("re-running everything")
 
-        event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size)
+        #event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size)
+        event_month_ranges, monthly_day_ranges = get_event_blocks_return_dispersion()
         print("ranges calculated")
 
         stocks = advanced_fetch_stock_data(start_year, end_year, n_stocks)
