@@ -48,29 +48,29 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     prices_of_beta1 = []
     prices_of_beta2 = []
     for seq in unique_sequences:
-        if(seq >= 61):
-            print(f'Calculating betas for sequence {seq}')
-            seq_range = range(seq-60, seq+1)
+        if(seq >= 72 and seq % 12 == 0):
+            print(seq)
+            seq_range = range(seq-71, seq+1)
             data_subset = monthly_returns[monthly_returns['sequence #'].isin(seq_range)]
             data_range1 = data_subset[data_subset['type'] == 1]
             data_range2 = data_subset[data_subset['type'] == 2]
             # Sort by 'permco'
-            sorted_data1 = data_range1.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 61)
-            sorted_data2 = data_range2.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 61)
+            sorted_data1 = data_range1.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 72)
+            sorted_data2 = data_range2.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 72)
 
             #valid_data = sorted_data.groupby('permco').filter(lambda x: len(x) == 72)
             # Group by 'permco' again and calculate the beta for each group
             betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
+            returns1 = sorted_data1.groupby('permco').apply(lambda x: np.sum(x['equity_returns'][60:]))
             betas2 = sorted_data2.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
-            returns1 = sorted_data1.groupby('permco').apply(lambda x: x['equity_returns'][60:])
-            returns2 = sorted_data2.groupby('permco').apply(lambda x: x['equity_returns'][60:])
-            sp_returns1 = sorted_data1.groupby('permco').apply(lambda x: x['sp500_return'][60:])
-            sp_returns2 = sorted_data2.groupby('permco').apply(lambda x: x['sp500_return'][60:])
-            market_caps1 = sorted_data1.groupby('permco').apply(lambda x: x['market_cap'][60:])
-            market_caps2 = sorted_data2.groupby('permco').apply(lambda x: x['market_cap'][60:])
+            returns2 = sorted_data2.groupby('permco').apply(lambda x: np.sum(x['equity_returns'][60:]))
+            market_caps1 = sorted_data1.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
             market_caps1.fillna(0, inplace=True)
+            market_caps2 = sorted_data2.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
             market_caps2.fillna(0, inplace=True)
 
+            sp_returns1 = sorted_data1.groupby('permco').apply(lambda x: np.mean(x['sp500_return'][60:]))
+            sp_returns2 = sorted_data2.groupby('permco').apply(lambda x: np.mean(x['sp500_return'][60:]))
             # Make 10 groups based on 10 betas
 
             betas1_grouped = pd.qcut(betas1, num_groups, labels=False)
@@ -92,13 +92,10 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
                 betas2.append(calculate_beta_force(returns2[group2_indices], sp_returns2[group2_indices]))
 
             prices_of_beta1.append(calculate_beta(means1, betas1))
-            print(prices_of_beta1[-1])
             prices_of_beta2.append(calculate_beta(means2, betas2))
-            print(prices_of_beta2[-1])
-            print("-------------------")
             
     plt.figure()
-    _, bins, _ = plt.hist(prices_of_beta1, bins=20, histtype=u'step', label="Monthly Returns")
+    _, bins, _ = plt.hist(prices_of_beta1, bins=10, histtype=u'step', label="Monthly Returns")
     plt.hist(prices_of_beta2, bins=bins,  histtype=u'step', label="Event Months Returns")
     plt.legend()
     plt.savefig("histogram.png")

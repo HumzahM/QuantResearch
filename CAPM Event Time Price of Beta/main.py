@@ -70,14 +70,13 @@ def calculate_weighted_beta(y, x, weights):
     # Add a column of ones to x for the intercept
     x_with_intercept = sm.add_constant(x)
 
-    # Fit the weighted least squares model
+    # # Fit the weighted least squares model
     model = sm.WLS(y, x_with_intercept, weights=scaled_weights).fit()
 
-    # Return the intercept and beta (slope)
+    # # Return the intercept and beta (slope)
     intercept, beta = model.params
+
     return beta
-
-
 
 
 def calculate_betas(monthly_returns):
@@ -117,8 +116,8 @@ def calculate_price_of_betas(monthly_returns):
     for seq in unique_sequences:
         print(f'Calculating price of beta for sequence {seq}')
         data_seq = monthly_returns[monthly_returns['sequence #'] == seq]
-        data_seq1 = data_seq[(data_seq['type'] == 1) & (data_seq['market_cap'].notnull())]
-        data_seq2 = data_seq[(data_seq['type'] == 2) & (data_seq['market_cap'].notnull())]
+        data_seq1 = data_seq[(data_seq['type'] == 1) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
+        data_seq2 = data_seq[(data_seq['type'] == 2) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
         price_of_beta1.append(calculate_weighted_beta(data_seq1['equity_returns'], data_seq1['beta'], data_seq1['market_cap']))
         price_of_beta2.append(calculate_weighted_beta(data_seq2['equity_returns'], data_seq2['beta'], data_seq2['market_cap']))
 

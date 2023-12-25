@@ -83,8 +83,6 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
                     
                 portfolio_range1[i].append(np.average(returns1[group1_indices], weights=market_caps1[group1_indices]))
                 portfolio_range2[i].append(np.average(returns2[group2_indices], weights=market_caps2[group2_indices]))
-                #portfolio_range1[i].append(np.average(returns1[group1_indices]))
-                #portfolio_range2[i].append(np.average(returns2[group2_indices]))
 
             relevant_sp_data = spr_returns[spr_returns['sequence #'].isin(range(seq-11,seq+1))]
             sp500ret1 = np.sum(relevant_sp_data["sp500_return_range1"])
@@ -102,6 +100,8 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     skews2 = []
     kurtosis1 = []
     kurtosis2 = []
+
+    print(portfolio_range2[8])
 
     for point in portfolio_range1:
         beta = calculate_beta_force(point, spreturns1)
@@ -168,34 +168,55 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
 
     # Plot histograms of the portfolio returns - doesn't do anything useful rn but maybe I'll want to come back to it later
 
-    # portfolio_ranges = [portfolio_range1, portfolio_range2]
-    # colors = ['blue', 'red']  # Blue for portfolio_range1, Red for portfolio_range2
+    portfolio_ranges = [portfolio_range1, portfolio_range2]
+    colors = ['blue', 'red']  # Blue for portfolio_range1, Red for portfolio_range2
 
-    # # Create a figure with 20 subplots (2 rows x 10 columns)
-    # fig, axs = plt.subplots(2, 10, figsize=(30, 10))
+    # Create a figure with 20 subplots (2 rows x 10 columns)
+    fig, axs = plt.subplots(2, 10, figsize=(30, 10))
 
-    # # Set a main title for the figure
-    # fig.suptitle('Histograms of Portfolio Returns', fontsize=16)
+    # Set a main title for the figure
+    fig.suptitle('Histograms of Portfolio Returns', fontsize=16)
 
-    # for i in range(2):
-    #     for j in range(10):
-    #         point = portfolio_ranges[i][j]
+    for i in range(2):
+        for j in range(10):
+            point = portfolio_ranges[i][j]
 
-    #         # Plot histogram in the subplot
-    #         axs[i, j].hist(point, bins=20, color=colors[i])
-    #         axs[i, j].set_title(f'Portfolio {i+1} - Point {j+1}')
-    #         axs[i, j].set_xlabel('Returns')
-    #         axs[i, j].set_ylabel('Frequency')
+            # Plot histogram in the subplot
+            axs[i, j].hist(point, bins=20, color=colors[i])
+            axs[i, j].set_title(f'Portfolio {i+1} - Point {j+1}')
+            axs[i, j].set_xlabel('Returns')
+            axs[i, j].set_ylabel('Frequency')
 
-    #         # Highlighting the row for each portfolio range
-    #         if j == 0:
-    #             axs[i, j].text(-0.3, 0.5, f'Portfolio {i+1}', transform=axs[i, j].transAxes, 
-    #                         fontsize=14, color='black', rotation='vertical', verticalalignment='center')
+            # Highlighting the row for each portfolio range
+            if j == 0:
+                axs[i, j].text(-0.3, 0.5, f'Portfolio {i+1}', transform=axs[i, j].transAxes, 
+                            fontsize=14, color='black', rotation='vertical', verticalalignment='center')
 
-    # # Adjust layout to prevent overlap
-    # plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the rect to account for the main title
-    # plt.savefig("histograms_beta_vs_mean_return.png")
-    # plt.show()
+    # Adjust layout to prevent overlap
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the rect to account for the main title
+    plt.savefig("histograms_beta_vs_mean_return.png")
+    
+    plt.figure()
+    counter = 1
+    for point in portfolio_range1:
+        plt.plot(point, label=f'Point {counter}')
+        counter += 1 
+    plt.plot(spreturns1, label="SP500 Returns", color='black', linewidth=2.5)
+    plt.legend()   
+    plt.title("Portfolio Returns for Range 1")
+    plt.savefig("portfolio_returns1.png")
+    plt.figure()
+
+    counter = 1
+    for point in portfolio_range2:
+        plt.plot(point, label=f'Point {counter}')
+        counter += 1
+    plt.plot(spreturns2, label="SP500 Returns", color='black', linewidth=2.5)
+    plt.legend()
+    plt.title("Portfolio Returns for Range 2")
+    plt.savefig("portfolio_returns2.png")
+
+    #plt.show()
 
 print("running")
 
