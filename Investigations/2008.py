@@ -10,9 +10,6 @@ start_year = 1990
 end_year = 2019
 n_stocks = 500
 
-# Rerun flag
-rerunMonthlyReturns = True
-
 # Directory for storing pickle files
 data_directory = 'data'
 os.makedirs(data_directory, exist_ok=True)
@@ -56,10 +53,10 @@ def get_dates(sequence_num, type_num):
 # Assuming your dataframe is named monthly_returns
 monthly_returns['start_date'], monthly_returns['end_date'] = zip(*monthly_returns.apply(lambda row: get_dates(row['sequence #'], row['type']), axis=1))
 
-first_analysis_date = '2007-08-01'
-last_analysis_date = '2009-11-31'
+first_analysis_date = '2000-01-01'
+last_analysis_date = '2002-12-31'
 
-#monthly_returns = monthly_returns[(monthly_returns['start_date'] >= first_analysis_date) & (monthly_returns['end_date'] <= last_analysis_date)]
+monthly_returns = monthly_returns[(monthly_returns['start_date'] >= first_analysis_date) & (monthly_returns['end_date'] <= last_analysis_date)]
 
 # Selecting only the required columns
 selected_data = monthly_returns[['type', 'sequence #', 'sp500_return', 'start_date', 'end_date']]
@@ -69,7 +66,14 @@ unique_data = selected_data.drop_duplicates()
 #unique_data.sort_values(by='sp500_return', inplace=True)
 
 # Now, you can save this filtered and unique data to a new file
-unique_data.to_csv('2008.csv', index=False)
+_, bins, _ = plt.hist(unique_data[unique_data['type'] == 2]['sp500_return'], bins=10, histtype=u'step', label="Event Months")
+plt.hist(unique_data[unique_data['type'] == 1]['sp500_return'], bins=bins,  histtype=u'step', label="Time Months")
+plt.legend()
+plt.ylabel("# Months")
+plt.xlabel("Return (Log)")
+#plt.title("Returns 2000-2002 (Dotcom Bubble)")
+plt.title(f"Recession (2008-2009) \n {len(unique_data[unique_data['type'] == 1])} months and {len(unique_data[unique_data['type'] == 2])} event months")
+plt.show()
 
 
 

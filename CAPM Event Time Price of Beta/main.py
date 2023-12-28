@@ -21,6 +21,7 @@ sys.path.append(parent_dir)
 from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
+from Helper_Functions.better_calculate_monthly_returns import better_calculate_monthly_returns
 
 start_date = '1990-01-01'
 end_date = '2019-12-31'
@@ -154,7 +155,7 @@ n_stocks = 500
 
 # Rerun flag
 rerunMonthlyReturns = False
-rerunBetaCalc = False
+rerunBetaCalc = True
 
 if(rerunMonthlyReturns):
     rerunBetaCalc = True

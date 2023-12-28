@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from math import log
 
 def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_ranges1, date_ranges2, calculate_sp=True):
     stock_data['date'] = pd.to_datetime(stock_data['date'])
@@ -17,7 +18,6 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
         print(counter)
         counter += 1
         stock_data_permco = stock_data[stock_data['permco'] == permco]
-
         permco_dates = stock_data_permco['date']
         #print(permco_dates)
         first_date_permco = permco_dates.min()
@@ -26,13 +26,9 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
         for i, (start1, end1) in enumerate(date_ranges1):
             if start1 >= first_date_permco and end1 <= last_date_permco:
                 filtered_stock_data1 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start1) & (stock_data_permco['date'] <= end1)], risk_free_rate_data, on='date')
-
-                filtered_stock_data1['log equity returns'] = np.log(1 + filtered_stock_data1['ret'] - filtered_stock_data1['rf'])
-
-                monthly_return1 = filtered_stock_data1['log equity returns'].sum()
-
-                sp500_return1 = sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['log sp500 returns'].sum()
-
+                monthly_return1 = log((1 + filtered_stock_data1['ret'] - filtered_stock_data1['rf']).prod())
+                sp500_return1 = log((sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['ret']+1).prod())
+                
                 row = pd.DataFrame({
                     'sequence #': [i],
                     'type': [1],
@@ -47,11 +43,9 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
             if start2 >= first_date_permco and end2 <= last_date_permco:
                 filtered_stock_data2 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start2) & (stock_data_permco['date'] <= end2)], risk_free_rate_data, on='date')
 
-                filtered_stock_data2['log equity returns'] = np.log(1 + filtered_stock_data2['ret'] - filtered_stock_data2['rf'])
-
-                monthly_return2 = filtered_stock_data2['log equity returns'].sum()
-
-                sp500_return2 = sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['log sp500 returns'].sum()
+                monthly_return2 = log((1 + filtered_stock_data2['ret'] - filtered_stock_data2['rf']).prod())
+                
+                sp500_return2 = log((sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['ret']+1).prod())
 
                 row = pd.DataFrame({
                     'sequence #': [i],
@@ -69,15 +63,14 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
 
         #calculate spr returns 
         for i, ((start1, end1), (start2, end2)) in enumerate(zip(date_ranges1, date_ranges2)): 
-            sp500_return1 = sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['log sp500 returns'].sum()
-            sp500_return2 = sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['log sp500 returns'].sum()
+            sp500_return1 = log((sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['ret']+1).prod())
+            sp500_return2 = log((sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['ret']+1).prod())
             row = pd.DataFrame({
                 'sequence #': [i], 
                 'sp500_return_range1': [sp500_return1],
                 'sp500_return_range2': [sp500_return2]
             })
             spr_returns = pd.concat([spr_returns, row], ignore_index=True)
-
         return final_results, spr_returns
     
     else:
