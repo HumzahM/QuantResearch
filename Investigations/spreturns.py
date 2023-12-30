@@ -27,14 +27,9 @@ with open(monthly_returns_filename, 'rb') as f:
 with open(spr_returns_filename, 'rb') as f:
     spr_returns = pickle.load(f)
 
-spr_returns['normal_returns_range1'] = np.exp(spr_returns['sp500_return_range1'])-1
-spr_returns['normal_returns_range2'] = np.exp(spr_returns['sp500_return_range2'])-1
-
-print(np.prod(1+spr_returns['normal_returns_range1'])-1)
-print(np.prod(1+spr_returns['normal_returns_range2'])-1)
-
 _, bins, _ = plt.hist(spr_returns['sp500_return_range1'], bins=10, histtype=u'step', label="Monthly Returns")
-plt.figure()
 plt.hist(spr_returns['sp500_return_range2'], bins=bins,  histtype=u'step', label="Event Months Returns")
 plt.legend()
-plt.show()
+plt.savefig("spreturns.png")
+
+from scipy.stats import kurtosis, skew

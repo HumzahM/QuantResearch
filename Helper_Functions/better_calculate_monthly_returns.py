@@ -69,7 +69,7 @@ def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data
             sp500_return = log((sp500_data[(sp500_data['date'] >= start) & (sp500_data['date'] <= end)]['ret']+1).prod())
             
             row = {
-                'sequence #': i,
+                'sequence #': i if i < len(date_ranges1) else i - len(date_ranges1),
                 'sp500_return': sp500_return
             }
             spr_returns_list.append(row)

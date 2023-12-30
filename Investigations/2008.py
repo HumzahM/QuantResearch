@@ -33,7 +33,7 @@ sys.path.append(parent_dir)
 from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
-from Return_Dispersion.return_dispersion import get_event_blocks_return_dispersion
+from Helper_Functions.Return_Dispersion.return_dispersion import get_event_blocks_return_dispersion
 
 start_date = '1990-01-01'
 end_date = '2019-12-31'
@@ -53,8 +53,8 @@ def get_dates(sequence_num, type_num):
 # Assuming your dataframe is named monthly_returns
 monthly_returns['start_date'], monthly_returns['end_date'] = zip(*monthly_returns.apply(lambda row: get_dates(row['sequence #'], row['type']), axis=1))
 
-first_analysis_date = '2000-01-01'
-last_analysis_date = '2002-12-31'
+first_analysis_date = '1993-01-01'
+last_analysis_date = '1994-12-31'
 
 monthly_returns = monthly_returns[(monthly_returns['start_date'] >= first_analysis_date) & (monthly_returns['end_date'] <= last_analysis_date)]
 
@@ -71,9 +71,8 @@ plt.hist(unique_data[unique_data['type'] == 1]['sp500_return'], bins=bins,  hist
 plt.legend()
 plt.ylabel("# Months")
 plt.xlabel("Return (Log)")
-#plt.title("Returns 2000-2002 (Dotcom Bubble)")
-plt.title(f"Recession (2008-2009) \n {len(unique_data[unique_data['type'] == 1])} months and {len(unique_data[unique_data['type'] == 2])} event months")
-plt.show()
+plt.title(f"Calm Market (01/1993-12/1994) \n {len(unique_data[unique_data['type'] == 1])} months and {len(unique_data[unique_data['type'] == 2])} event months")
+plt.savefig("Calm 2.png")
 
 
 
