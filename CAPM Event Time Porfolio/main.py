@@ -20,18 +20,9 @@ sys.path.append(parent_dir)
 from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
-from Helper_Functions.Return_Dispersion.return_dispersion import get_event_blocks_return_dispersion
+#from Helper_Functions.Return_Dispersion.return_dispersion import get_event_blocks_return_dispersion
 from Helper_Functions.better_calculate_monthly_returns import better_calculate_monthly_returns
-
-start_date = '1990-01-01'
-end_date = '2019-12-31'
-
-risk_free = pd.read_csv('../Useful Data/rf daily rate.csv')
-risk_free = risk_free[(risk_free['date'] >= start_date) & (risk_free['date'] <= end_date)]
-market_returns = pd.read_csv('../Useful Data/sp500_return_data.csv')
-market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
-market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
-market_returns['ret'] = market_returns['sprtrn'] - market_returns['rf']
+from Helper_Functions.test import better_calculate_monthly_returns_test
 
 #for beta, y is stock return (dependant) and x is market return (independant)
 def calculate_beta(y, x):
@@ -57,8 +48,6 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     portfolio_range2 = [[] for _ in range(num_groups)]
     spreturns1 = []
     spreturns2 = []
-    r2_scores1 = []
-    r2_scores2 = []
     for seq in unique_sequences:
         if(seq >= 72 and seq % 12 == 0):
             print(seq)
@@ -72,19 +61,14 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
             sorted_data2 = data_range2.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 72)
 
             # Group by 'permco' again and calculate the beta for each group
-            betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
+            betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns'][0:60], x['sp500_return'][0:60]))
             returns1 = sorted_data1.groupby('permco').apply(lambda x: np.log(np.prod(1+x['equity_returns'][60:])))
-            r2_scores1.append(r2_score(returns1, betas1))
-            print(r2_score(returns1, betas1))
-            betas2 = sorted_data2.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
+            betas2 = sorted_data2.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns'][0:60], x['sp500_return'][0:60]))
             returns2 = sorted_data2.groupby('permco').apply(lambda x: np.log(np.prod(1+x['equity_returns'][60:])))
-            r2_scores2.append(r2_score(returns2, betas2))
             market_caps1 = sorted_data1.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
             market_caps1.fillna(1, inplace=True)
-            adjusted_caps1 = market_caps1 / np.sum(market_caps1)
             market_caps2 = sorted_data2.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
             market_caps2.fillna(1, inplace=True)
-            adjusted_caps2 = market_caps2 / np.sum(market_caps2)
 
             # Make 10 groups based on 10 betas
 
@@ -94,8 +78,8 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
 
                 group1_indices = betas1_grouped[betas1_grouped == i].index
                 group2_indices = betas2_grouped[betas2_grouped == i].index
-                portfolio_range1[i].append(np.average(returns1[group1_indices], weights=adjusted_caps1[group1_indices]))
-                portfolio_range2[i].append(np.average(returns2[group2_indices], weights=adjusted_caps2[group2_indices]))
+                portfolio_range1[i].append(np.average(returns1[group1_indices], weights=market_caps1[group1_indices]))
+                portfolio_range2[i].append(np.average(returns2[group2_indices], weights=market_caps2[group2_indices]))
 
             relevant_sp_data = spr_returns[spr_returns['sequence #'].isin(range(seq-11,seq+1))]
             sp500ret1 = np.log(np.prod(1+relevant_sp_data["sp500_return_range1"]))
@@ -132,8 +116,8 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     betas3.append(1)
     betas3.append(1)
     means3 = []
-    means3.append(np.sum(spreturns1))
-    means3.append(np.sum(spreturns2))
+    means3.append(np.mean(spreturns1))
+    means3.append(np.mean(spreturns2))
 
     plt.scatter(betas1, means1, color='blue')
     plt.scatter(betas2, means2, color='red')
@@ -176,11 +160,6 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     print(f"Average Skew for Range 2: {avg_skews2}")
     print(f"T-statistic for Kurtosis: {t_stat_kurtosis}, P-value for Kurtosis (One Tailed): {p_value_kurtosis/2}")
     print(f"T-statistic for Skew: {t_stat_skew}, P-value for Skew (One Tailed): {p_value_skew/2}")
-
-    t_stat_r2diff, p_value_r2diff = ttest_ind(r2_scores1, r2_scores2)
-    print(f"Average r2 for Range 1: {np.mean(r2_scores1)}")
-    print(f"Average r2 for Range 2: {np.mean(r2_scores2)}")
-    print(f"T-statistic for r2: {t_stat_r2diff}, P-value for r2 (One Tailed): {p_value_r2diff/2}")
 
     # Plot histograms of the portfolio returns - doesn't do anything useful rn but maybe I'll want to come back to it later
 
@@ -238,11 +217,13 @@ print("running")
 
 window_size = 2520
 start_year = 1990
-end_year = 2019
+end_year = 2017
 n_stocks = 500
+start_date = '1990-01-01'
+end_date = '2017-12-31'
 
 # Rerun flag
-rerunMonthlyReturns = False
+rerunMonthlyReturns = True
 
 # Directory for storing pickle files
 data_directory = 'data'
@@ -252,18 +233,27 @@ os.makedirs(data_directory, exist_ok=True)
 monthly_returns_filename = os.path.join(data_directory, f'{window_size}_{n_stocks}_{start_year}_{end_year}_monthly_returns.pickle')
 spr_returns_filename = os.path.join(data_directory, f'{window_size}_{n_stocks}_{start_year}_{end_year}_spr_returns.pickle')
 
+risk_free = pd.read_csv('../Useful Data/rf daily rate.csv')
+risk_free = risk_free[(risk_free['date'] >= start_date) & (risk_free['date'] <= end_date)]
+market_returns = pd.read_csv('../Useful Data/sp500_return_data.csv')
+market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
+market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
+market_returns['ret'] = market_returns['sprtrn'] - market_returns['rf']
+
 try:
     if rerunMonthlyReturns or not (os.path.exists(monthly_returns_filename) and os.path.exists(spr_returns_filename)):
         print("re-running everything")
 
-        #event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size)
-        event_month_ranges, monthly_day_ranges = get_event_blocks_return_dispersion()
+        event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size)
+        #event_month_ranges, monthly_day_ranges = get_event_blocks_return_dispersion()
         print("ranges calculated")
 
         stocks = advanced_fetch_stock_data(start_year, end_year, n_stocks)
         print("stocks fetched")
         #monthly_returns, spr_returns = calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
-        monthly_returns, spr_returns = better_calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
+        spr_returns = better_calculate_monthly_returns_test(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
+
+        #monthly_returns, spr_returns = better_calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
         print("monthly returns calculated")
 
         with open(monthly_returns_filename, 'wb') as f:
@@ -277,9 +267,11 @@ try:
         with open(spr_returns_filename, 'rb') as f:
             spr_returns = pickle.load(f)
         print("Data loaded from existing files")
+    
+    calculate_betas_and_portfolio_returns(monthly_returns, spr_returns)
 
 except Exception as e:
     print(f"An error occurred: {e}")
 
-calculate_betas_and_portfolio_returns(monthly_returns, spr_returns)
+
 

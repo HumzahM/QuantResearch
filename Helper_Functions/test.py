@@ -2,7 +2,7 @@ import pandas as pd
 from numpy import log
 from tqdm import tqdm  # for progress bar
 
-def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_ranges1, date_ranges2, calculate_sp=True):
+def better_calculate_monthly_returns_test(stock_data, sp500_data, risk_free_rate_data, date_ranges1, date_ranges2, calculate_sp=True):
     # Convert dates to datetime objects and sort data
     stock_data['date'] = pd.to_datetime(stock_data['date'])
     sp500_data['date'] = pd.to_datetime(sp500_data['date'])
@@ -19,7 +19,7 @@ def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data
     spr_returns_list = []
 
     unique_permcos = stock_data['permco'].unique()
-
+    """
     for permco in tqdm(unique_permcos, desc="Processing companies"):  # Progress bar
         stock_data_permco = stock_data[stock_data['permco'] == permco]
 
@@ -61,7 +61,7 @@ def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data
                     final_results_list.append(row)
 
     final_results = pd.DataFrame(final_results_list)
-
+    """
     if calculate_sp:
         for i in range(len(date_ranges1)):
             start1, end1 = date_ranges1[i]
@@ -76,6 +76,6 @@ def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data
             }
             spr_returns_list.append(row)
         spr_returns = pd.DataFrame(spr_returns_list)
-        return final_results, spr_returns
+        return spr_returns
     else:
-        return final_results
+        return spr_returns

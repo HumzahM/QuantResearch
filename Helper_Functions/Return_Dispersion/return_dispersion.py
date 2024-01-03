@@ -23,18 +23,21 @@ def day_return_dispersion(returns, market_caps):
     squared_diff = (returns - weighted_mean_return) ** 2
     weighted_squared_diff = weights * squared_diff
     weighted_variance = np.sum(weighted_squared_diff)
-    equity_return_dispersion = np.sqrt(weighted_variance)
+    #equity_return_dispersion = np.sqrt(weighted_variance)
+    equity_return_dispersion = weighted_variance
 
     return equity_return_dispersion
 
 def get_event_blocks_return_dispersion():
-    data = advanced_fetch_stock_data(1990, 2019, 500)
+    data = advanced_fetch_stock_data(1990, 2017, 500)
     data["market_cap"].fillna(1, inplace=True)
     data["ret"].fillna(0, inplace=True)
     data['month'] = pd.DatetimeIndex(data['date']).to_period('M')
     return_dispersions = data.groupby("date").apply(lambda x: day_return_dispersion(x["ret"], x["market_cap"]))
     num_events = len(data.groupby('month')['ret'].sum())
     normalized_trading_scaled = np.array(return_dispersions * return_dispersions.shape[0]/np.sum(return_dispersions))
+    plt.plot(normalized_trading_scaled)
+    plt.savefig("return_dispersion2.png")
     normalized_days_per_month = np.sum(normalized_trading_scaled)/(num_events) #equal to days per month
     new_blocks = np.empty(num_events, dtype=int)
     event_month_lengths = np.empty(num_events)
@@ -81,4 +84,6 @@ def get_event_blocks_return_dispersion():
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
 
-    return first_last_pairs_array_event_months, first_last_pairs_array_time_months
+    return first_last_pairs_array_event_months, first_last_pairs_array_time_months, normalized_trading_scaled
+
+get_event_blocks_return_dispersion()
