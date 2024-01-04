@@ -11,9 +11,9 @@ parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
 
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
-from Helper_Functions.total_market_trades import get_event_month_blocks
+from Helper_Functions.total_market_trades import *
 
-def day_return_dispersion(returns, market_caps):
+def day_return_dispersion(returns, market_caps, spreads):
     # Calculate the weighted mean return
     total_market_cap = np.sum(market_caps)
     weights = market_caps / total_market_cap
@@ -26,18 +26,39 @@ def day_return_dispersion(returns, market_caps):
     #equity_return_dispersion = np.sqrt(weighted_variance)
     equity_return_dispersion = weighted_variance
 
-    return equity_return_dispersion
+    final = equity_return_dispersion - np.mean(spreads ** 2) / 4
+
+    if(final < 0):
+        final = 0
+
+    return final
 
 def get_event_blocks_return_dispersion():
-    data = advanced_fetch_stock_data(1990, 2017, 500)
-    data["market_cap"].fillna(1, inplace=True)
+    data = advanced_fetch_stock_data(1990, 2019, 500)
+    data["percent_spread"].fillna(method="ffill", inplace=True)
+    data["market_cap"].fillna(method='ffill', inplace=True)
     data["ret"].fillna(0, inplace=True)
     data['month'] = pd.DatetimeIndex(data['date']).to_period('M')
-    return_dispersions = data.groupby("date").apply(lambda x: day_return_dispersion(x["ret"], x["market_cap"]))
+    return_dispersions = data.groupby("date").apply(lambda x: day_return_dispersion(x["ret"], x["market_cap"], x["percent_spread"]))
     num_events = len(data.groupby('month')['ret'].sum())
     normalized_trading_scaled = np.array(return_dispersions * return_dispersions.shape[0]/np.sum(return_dispersions))
+    indices = np.where(normalized_trading_scaled > 20)[0]
+    for index in indices:
+        print(data['date'][index])
+    n = 50
+    rolling_mean = np.convolve(normalized_trading_scaled, np.ones(n), mode='full') / n
+    # Plot the rolling mean
+    plt.plot(rolling_mean)
+    plt.xlabel('Days')
+    plt.ylabel('Mean Trades per Day')
+    plt.title(f'Mean Trades Per Day (n={n})')
+    plt.savefig("Rolling Mean (RD as Variance - Bid-Ask Spread)")
+    plt.figure()
     plt.plot(normalized_trading_scaled)
-    plt.savefig("return_dispersion2.png")
+    plt.xlabel('Days')
+    plt.ylabel('Event Days')
+    plt.title(f'Event Days (RD as Variance - Bid-Ask Spread)')
+    plt.savefig("Event Days (RD as Variance - Bid-Ask Spread)")
     normalized_days_per_month = np.sum(normalized_trading_scaled)/(num_events) #equal to days per month
     new_blocks = np.empty(num_events, dtype=int)
     event_month_lengths = np.empty(num_events)
@@ -66,24 +87,49 @@ def get_event_blocks_return_dispersion():
         # Getting the first and last date of the month
         first_date = monthly_data['date'].iloc[0].strftime('%Y-%m-%d')
         last_date = monthly_data['date'].iloc[-1].strftime('%Y-%m-%d')
+        #first_date = monthly_data['date'].iloc[0]
+        #last_date = monthly_data['date'].iloc[-1]
 
         # Adding the pair to the list
         first_last_pairs_time_months.append([first_date, last_date])
 
-# Iterating through the events to get the pairs
+    #data['date'] = data['date'].strftime('%Y-%m-%d')
+    # Iterating through the events to get the pairs
     for i in range(num_events):
         # Getting the first date for the current block
         first_date = data['date'][new_blocks[i - 1] + 1] if i > 0 else data['date'][0]
 
         # Getting the last date for the current block
+        last_date = data['date'][new_blocks[i]]
+
+        # Printing the dates for the current block
         last_date = data['date'][new_blocks[i]] if i < num_events - 1 else data['date'].iloc[-1]
 
         # Storing the pair in the array
         first_last_pairs_array_event_months[i] = [first_date, last_date]
-    
+
+
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
 
+
     return first_last_pairs_array_event_months, first_last_pairs_array_time_months, normalized_trading_scaled
 
-get_event_blocks_return_dispersion()
+def optimize(min, max, step, return_dispersion_normalized_trading_scaled):
+    MAEs = []
+    for i in np.arange(min, max, step):
+        print(f'N = {i}')
+        normalized_trading_scaled = optimize_helper(i)
+        #MAE = np.sqrt(np.mean((normalized_trading_scaled - return_dispersion_normalized_trading_scaled) ** 2))
+        MAE = np.mean(np.abs(normalized_trading_scaled - return_dispersion_normalized_trading_scaled))
+        MAEs.append(MAE)
+    plt.figure()
+    plt.plot(np.arange(min, max, step), MAEs)
+    plt.xlabel('N')
+    plt.ylabel('MAE')
+    plt.title(f'MAE vs N')
+    plt.savefig("MAE vs N (RD as Variance - Bid-Ask Spread))")
+
+_, _, return_dispersion_normalized_trading_scaled_ = get_event_blocks_return_dispersion()
+
+#optimize(250, 5000, 50, return_dispersion_normalized_trading_scaled_)

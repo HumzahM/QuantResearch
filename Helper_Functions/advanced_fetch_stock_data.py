@@ -60,7 +60,8 @@ def advanced_fetch_stock_data(start_year, end_year, n_stocks):
             dsf.date, 
             dsf.permco, 
             dsf.ret,
-            dsf.shrout * dsf.prc as market_cap
+            dsf.shrout * dsf.prc as market_cap,
+            (dsf.ask - dsf.bid) / dsf.prc as percent_spread
         FROM 
             crsp.dsf as dsf
         JOIN 

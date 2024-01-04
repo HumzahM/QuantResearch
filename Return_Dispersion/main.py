@@ -16,9 +16,8 @@ from pathlib import Path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
 
-from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
-from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
+import return_dispersion
 from Helper_Functions.better_calculate_monthly_returns import better_calculate_monthly_returns
 
 #for beta, y is stock return (dependant) and x is market return (independant)
@@ -232,16 +231,16 @@ spr_returns_filename = os.path.join(data_directory, f'{window_size}_{n_stocks}_{
 
 risk_free = pd.read_csv('../Useful Data/rf daily rate.csv')
 risk_free = risk_free[(risk_free['date'] >= start_date) & (risk_free['date'] <= end_date)]
-market_returns = pd.read_csv('../Useful Data/value_weighted_return.csv')
+market_returns = pd.read_csv('../Useful Data/sp500_return_data.csv')
 market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
 market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
-market_returns['ret'] = market_returns['vwretd'] - market_returns['rf']
+market_returns['ret'] = market_returns['sprtrn'] - market_returns['rf']
 
 try:
     if rerunMonthlyReturns or not (os.path.exists(monthly_returns_filename) and os.path.exists(spr_returns_filename)):
         print("re-running everything")
 
-        event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size)
+        event_month_ranges, monthly_day_ranges = return_dispersion.get_event_blocks_return_dispersion()
         print("ranges calculated")
 
         stocks = advanced_fetch_stock_data(start_year, end_year, n_stocks)

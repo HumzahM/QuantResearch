@@ -185,3 +185,42 @@ def get_event_month_blocks(window_size):
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
     
     return first_last_pairs_array_event_months, first_last_pairs_array_time_months
+
+def optimize_helper(window_size):
+    start_date_data = '1987-01-01'
+    start_date = '1990-01-01'
+    end_date_data = '2021-12-30'
+    end_date = '2019-12-31'
+
+    STOCK_NAME = "Market"
+
+    sql_query = f"""
+    SELECT date, SUM(NUMTRD) AS "total daily trades" 
+    FROM crsp.dsf
+    WHERE date BETWEEN '{start_date_data}' AND '{end_date_data}'
+    GROUP BY date
+    ORDER BY date;
+    """
+
+    data = run_or_load_query(sql_query)
+
+    #some trading days had 0, 1, or NaN, either bugs or not they mess stuff up
+    data["total daily trades"].fillna(value=0)
+    data = data[data["total daily trades"] > 1]
+
+    data['month'] = data['date'].dt.strftime('%Y-%m')
+    data['year'] = data['date'].dt.strftime('%Y')
+    data['monthly avg trade'] = data.groupby("month")['total daily trades'].transform('mean')
+
+    # Applying the function to a single column of the DataFrame
+    data['trading moving average'] = np.exp(symmetric_smoothing(np.log(data['total daily trades']), window_size, method='average'))
+
+    data = data[data['date'] <= end_date]
+    data = data[data['date'] >= start_date].reset_index(drop=True)
+
+
+    trading_moving_average_with_log = (data['total daily trades'] / data['trading moving average']).to_numpy()
+
+    normalized_trading_scaled = trading_moving_average_with_log * trading_moving_average_with_log.shape[0]/np.sum(trading_moving_average_with_log)
+
+    return normalized_trading_scaled
