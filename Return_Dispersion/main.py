@@ -16,9 +16,11 @@ from pathlib import Path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
 
+from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
-import return_dispersion
+from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
 from Helper_Functions.better_calculate_monthly_returns import better_calculate_monthly_returns
+import return_dispersion
 
 #for beta, y is stock return (dependant) and x is market return (independant)
 def calculate_beta(y, x):
@@ -30,10 +32,14 @@ def calculate_beta(y, x):
     return beta
 
 def calculate_beta_force(y, x):
-    return sm.OLS(y, x).fit().params[0]
+    beta = sm.OLS(y, x).fit().params[0]
+    return beta
 
 def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     unique_sequences = monthly_returns['sequence #'].unique()
+    monthly_returns['market_cap'].ffill(inplace=True)
+    monthly_returns['market_cap'].bfill(inplace=True)
+    monthly_returns['market_cap'].fillna(1, inplace=True)
     monthly_returns['equity_returns'] = monthly_returns['equity_returns'].apply(lambda x: np.exp(x)-1).fillna(0)
     monthly_returns['sp500_return'] = monthly_returns['sp500_return'].apply(lambda x: np.exp(x)-1).fillna(0)
     spr_returns['sp500_return_range1'] = spr_returns['sp500_return_range1'].apply(lambda x: np.exp(x)-1).fillna(0)
@@ -57,29 +63,34 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
             sorted_data2 = data_range2.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 72)
 
             # Group by 'permco' again and calculate the beta for each group
-            betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns'][0:60], x['sp500_return'][0:60]))
-            returns1 = sorted_data1.groupby('permco').apply(lambda x: np.log(np.prod(1+x['equity_returns'][60:])))
-            betas2 = sorted_data2.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns'][0:60], x['sp500_return'][0:60]))
-            returns2 = sorted_data2.groupby('permco').apply(lambda x: np.log(np.prod(1+x['equity_returns'][60:])))
-            market_caps1 = sorted_data1.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
-            market_caps1.fillna(1, inplace=True)
-            market_caps2 = sorted_data2.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:]))
-            market_caps2.fillna(1, inplace=True)
+            betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
+            returns1 = sorted_data1.groupby('permco').apply(lambda x: np.log((1+x['equity_returns'][60:]).prod()))
+            returns1.fillna(0, inplace=True)
+            betas2 = sorted_data2.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
+            returns2 = sorted_data2.groupby('permco').apply(lambda x: np.log((1+x['equity_returns'][60:]).prod()))
+            returns2.fillna(0, inplace=True)
+            market_caps1 = sorted_data1.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:61]))
+            adjusted_caps1 = market_caps1 / np.sum(market_caps1)
+            market_caps2 = sorted_data2.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:61]))
+            adjusted_caps2 = market_caps2 / np.sum(market_caps2)
+
+            # Filter out items where beta is 0
 
             # Make 10 groups based on 10 betas
-
             betas1_grouped = pd.qcut(betas1, num_groups, labels=False)
             betas2_grouped = pd.qcut(betas2, num_groups, labels=False)
-            for i in range(num_groups):
 
+            for i in range(num_groups):
                 group1_indices = betas1_grouped[betas1_grouped == i].index
                 group2_indices = betas2_grouped[betas2_grouped == i].index
-                portfolio_range1[i].append(np.average(returns1[group1_indices], weights=market_caps1[group1_indices]))
-                portfolio_range2[i].append(np.average(returns2[group2_indices], weights=market_caps2[group2_indices]))
+                portfolio_range1[i].append(np.average(returns1[group1_indices], weights=adjusted_caps1[group1_indices]))
+                portfolio_range2[i].append(np.average(returns2[group2_indices], weights=adjusted_caps2[group2_indices]))
 
             relevant_sp_data = spr_returns[spr_returns['sequence #'].isin(range(seq-11,seq+1))]
-            sp500ret1 = np.log(np.prod(1+relevant_sp_data["sp500_return_range1"]))
-            sp500ret2 = np.log(np.prod(1+relevant_sp_data["sp500_return_range2"]))
+            #sp500ret1 = np.sum(relevant_sp_data["sp500_return_range1"])
+            #sp500ret2 = np.sum(relevant_sp_data["sp500_return_range2"])
+            sp500ret1 = np.log((1+relevant_sp_data["sp500_return_range1"]).prod())
+            sp500ret2 = np.log((1+relevant_sp_data["sp500_return_range2"]).prod())
             spreturns1.append(sp500ret1)
             spreturns2.append(sp500ret2)
 
@@ -114,13 +125,13 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     means3 = []
     means3.append(np.mean(spreturns1))
     means3.append(np.mean(spreturns2))
-
+    plt.figure()
     plt.scatter(betas1, means1, color='blue')
     plt.scatter(betas2, means2, color='red')
     plt.scatter(betas3, means3, color='green')
     plt.xlabel('Beta')
     plt.ylabel('Mean Return')
-    plt.title('Beta vs Mean Return (Blue is Normal Months, Red is Event Months)')
+    plt.title(f'Beta vs Mean Return (Blue is Normal Months, Red is Event Months) \n Betas are {calculate_beta(means1, betas1)} and {calculate_beta(means2, betas2)}')
     plt.savefig("beta_vs_mean_return.png")
 
     # Create a dictionary with the variables
@@ -187,25 +198,27 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     # plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the rect to account for the main title
     # plt.savefig("histograms_beta_vs_mean_return.png")
     
-    # plt.figure()
-    # counter = 1
-    # for point in portfolio_range1:
-    #     plt.plot(point, label=f'Point {counter}')
-    #     counter += 1 
-    # plt.plot(spreturns1, label="SP500 Returns", color='black', linewidth=2.5)
-    # plt.legend()   
-    # plt.title("Portfolio Returns for Range 1")
-    # plt.savefig("portfolio_returns1.png")
-    # plt.figure()
+    plt.figure()
+    counter = 0
+    colors = plt.cm.Reds(np.linspace(0.2, 1, len(portfolio_range1)))  # Generate a color gradient from yellowish to red
+    for point, color in zip(portfolio_range1, colors):
+        plt.plot(point, label=f'Beta {round(betas1[counter], 2)}', color=color)
+        counter += 1 
+    plt.plot(spreturns1, label="SP500 Returns", color='black', linewidth=2.5)
+    plt.legend()
+    plt.title("Portfolio Returns for Range 1")
+    plt.savefig("portfolio_returns1.png")
+    plt.figure()
 
-    # counter = 1
-    # for point in portfolio_range2:
-    #     plt.plot(point, label=f'Point {counter}')
-    #     counter += 1
-    # plt.plot(spreturns2, label="SP500 Returns", color='black', linewidth=2.5)
-    # plt.legend()
-    # plt.title("Portfolio Returns for Range 2")
-    # plt.savefig("portfolio_returns2.png")
+    counter = 0
+    colors = plt.cm.Reds(np.linspace(0.2, 1, len(portfolio_range2)))  # Generate a color gradient from yellowish to red
+    for point, color in zip(portfolio_range2, colors):
+        plt.plot(point, label=f'Beta {round(betas2[counter], 2)}', color=color)
+        counter += 1
+    plt.plot(spreturns2, label="SP500 Returns", color='black', linewidth=2.5)
+    plt.legend()
+    plt.title("Portfolio Returns for Range 2")
+    plt.savefig("portfolio_returns2.png")
 
     #plt.show()
 
@@ -213,10 +226,10 @@ print("running")
 
 window_size = 2520
 start_year = 1990
-end_year = 2017
+end_year = 2019
 n_stocks = 500
-start_date = '1990-01-01'
-end_date = '2017-12-31'
+start_date = f'{start_year}-01-01'
+end_date = f'{end_year}-12-31'
 
 # Rerun flag
 rerunMonthlyReturns = True
@@ -231,22 +244,23 @@ spr_returns_filename = os.path.join(data_directory, f'{window_size}_{n_stocks}_{
 
 risk_free = pd.read_csv('../Useful Data/rf daily rate.csv')
 risk_free = risk_free[(risk_free['date'] >= start_date) & (risk_free['date'] <= end_date)]
-market_returns = pd.read_csv('../Useful Data/sp500_return_data.csv')
+market_returns = pd.read_csv('../Useful Data/value_weighted_return.csv')
 market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
 market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
-market_returns['ret'] = market_returns['sprtrn'] - market_returns['rf']
+market_returns['ret'] = market_returns['vwretd'] - market_returns['rf']
 
 try:
     if rerunMonthlyReturns or not (os.path.exists(monthly_returns_filename) and os.path.exists(spr_returns_filename)):
         print("re-running everything")
 
+        #event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size, start_year, end_year)
         event_month_ranges, monthly_day_ranges = return_dispersion.get_event_blocks_return_dispersion()
         print("ranges calculated")
 
         stocks = advanced_fetch_stock_data(start_year, end_year, n_stocks)
         print("stocks fetched")
 
-        monthly_returns, spr_returns = better_calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
+        monthly_returns, spr_returns = calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
         print("monthly returns calculated")
 
         with open(monthly_returns_filename, 'wb') as f:

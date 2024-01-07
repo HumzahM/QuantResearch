@@ -10,6 +10,7 @@ from scipy.stats import kurtosis, skew
 from scipy.stats import ttest_ind
 import warnings
 warnings.filterwarnings('ignore') # :) 
+from tqdm import tqdm
 
 import sys
 from pathlib import Path
@@ -22,16 +23,6 @@ from Helper_Functions.total_market_trades import *
 from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
 from Helper_Functions.better_calculate_monthly_returns import better_calculate_monthly_returns
-
-start_date = '1990-01-01'
-end_date = '2019-12-31'
-
-risk_free = pd.read_csv('../Useful Data/rf daily rate.csv')
-risk_free = risk_free[(risk_free['date'] >= start_date) & (risk_free['date'] <= end_date)]
-market_returns = pd.read_csv('../Useful Data/sp500_return_data.csv')
-market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
-market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
-market_returns['log sp500 returns'] = np.log(1+market_returns['sprtrn'] - market_returns['rf'])
 
 #for just the pure beta without forcing intercept to be 0
 def calculate_beta(y, x):
@@ -83,28 +74,23 @@ def calculate_weighted_beta(y, x, weights):
 def calculate_betas(monthly_returns):
     unique_permcos = monthly_returns['permco'].unique()
     monthly_returns['beta'] = np.nan
-    counter = 1
 
-    for permco in unique_permcos:
-        print(counter)
-        counter += 1
+    for permco in tqdm(unique_permcos):
         data_permco = monthly_returns[monthly_returns['permco'] == permco]
-        data_range1 = data_permco[data_permco['type'] == 1].sort_values(by=['sequence #'])
-        data_range2 = data_permco[data_permco['type'] == 2].sort_values(by=['sequence #'])
-
-        for i in range(len(data_range1)):
-            if i >= 60:
-                y_range1 = data_range1['equity_returns'].iloc[i-60:i]
-                x_range1 = data_range1['sp500_return'].iloc[i-60:i]
-                beta_range1 = calculate_beta_force(y_range1, x_range1)
-                monthly_returns.loc[data_range1.index[i], 'beta'] = beta_range1
-
-        for i in range(len(data_range2)):
-            if i >= 60:
-                y_range2 = data_range2['equity_returns'].iloc[i-60:i]
-                x_range2 = data_range2['sp500_return'].iloc[i-60:i]
-                beta_range2 = calculate_beta_force(y_range2, x_range2)
-                monthly_returns.loc[data_range2.index[i], 'beta'] = beta_range2
+        
+        for data_type in [1, 2]:
+            data_range = data_permco[data_permco['type'] == data_type].sort_values(by=['sequence #'])
+            # Split data into continuous blocks based on 'sequence #'
+            data_blocks = [data_range.iloc[i:j] for i, j in zip(np.r_[0, np.where(np.diff(data_range['sequence #']) != 1)[0] + 1],
+                                                               np.r_[np.where(np.diff(data_range['sequence #']) != 1)[0] + 1, len(data_range)])]
+            
+            for block in data_blocks:
+                for i in range(len(block)):
+                    if i >= 60:
+                        y = block['equity_returns'].iloc[i-60:i]
+                        x = block['sp500_return'].iloc[i-60:i]
+                        beta = calculate_beta_force(y, x)
+                        monthly_returns.loc[block.index[i], 'beta'] = beta
 
     return monthly_returns
 
@@ -114,8 +100,7 @@ def calculate_price_of_betas(monthly_returns):
     unique_sequences = monthly_returns['sequence #'].unique()
     price_of_beta1, price_of_beta2 = [], []
 
-    for seq in unique_sequences:
-        print(f'Calculating price of beta for sequence {seq}')
+    for seq in tqdm(unique_sequences):
         data_seq = monthly_returns[monthly_returns['sequence #'] == seq]
         data_seq1 = data_seq[(data_seq['type'] == 1) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
         data_seq2 = data_seq[(data_seq['type'] == 2) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
@@ -152,10 +137,19 @@ window_size = 2520
 start_year = 1990
 end_year = 2019
 n_stocks = 500
+start_date = f'{start_year}-01-01'
+end_date = f'{end_year}-12-31'
+
+risk_free = pd.read_csv('../Useful Data/rf daily rate.csv')
+risk_free = risk_free[(risk_free['date'] >= start_date) & (risk_free['date'] <= end_date)]
+market_returns = pd.read_csv('../Useful Data/value_weighted_return.csv')
+market_returns = market_returns[(market_returns['date'] >= start_date) & (market_returns['date'] <= end_date)]
+market_returns = market_returns.merge(risk_free, left_on='date', right_on='date')
+market_returns['ret'] = market_returns['vwretd'] - market_returns['rf']
 
 # Rerun flag
 rerunMonthlyReturns = False
-rerunBetaCalc = True
+rerunBetaCalc = False
 
 if(rerunMonthlyReturns):
     rerunBetaCalc = True

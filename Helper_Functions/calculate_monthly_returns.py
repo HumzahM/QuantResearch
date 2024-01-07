@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from math import log
+import tqdm
+from tqdm import tqdm
 
 def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_ranges1, date_ranges2, calculate_sp=True):
     stock_data['date'] = pd.to_datetime(stock_data['date'])
@@ -13,10 +15,7 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
     final_results = pd.DataFrame()
 
     unique_permcos = stock_data['permco'].unique()
-    counter = 1
-    for permco in unique_permcos:
-        print(counter)
-        counter += 1
+    for permco in tqdm(unique_permcos, desc="Processing companies"):
         stock_data_permco = stock_data[stock_data['permco'] == permco]
         permco_dates = stock_data_permco['date']
         #print(permco_dates)
@@ -24,11 +23,14 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
         last_date_permco = permco_dates.max()
 
         for i, (start1, end1) in enumerate(date_ranges1):
-            if start1 >= first_date_permco and end1 <= last_date_permco:
+            if start1 >= first_date_permco and end1 <= last_date_permco and start1 in stock_data_permco['date'].values and end1 in stock_data_permco['date'].values:
                 filtered_stock_data1 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start1) & (stock_data_permco['date'] <= end1)], risk_free_rate_data, on='date')
                 monthly_return1 = log((1 + filtered_stock_data1['ret'] - filtered_stock_data1['rf']).prod())
                 sp500_return1 = log((sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['ret']+1).prod())
-                
+                if(abs(sp500_return1) < 0.0001):
+                    print("return 0? ")
+                    print(permco)
+                    print(sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)])
                 row = pd.DataFrame({
                     'sequence #': [i],
                     'type': [1],
@@ -40,12 +42,16 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
                 final_results = pd.concat([final_results, row], ignore_index=True)
         
         for i, (start2, end2) in enumerate(date_ranges2):
-            if start2 >= first_date_permco and end2 <= last_date_permco:
+            if start2 >= first_date_permco and end2 <= last_date_permco and start2 in stock_data_permco['date'].values and end2 in stock_data_permco['date'].values:
                 filtered_stock_data2 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start2) & (stock_data_permco['date'] <= end2)], risk_free_rate_data, on='date')
 
                 monthly_return2 = log((1 + filtered_stock_data2['ret'] - filtered_stock_data2['rf']).prod())
                 
                 sp500_return2 = log((sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['ret']+1).prod())
+                if(abs(sp500_return2) < 0.0001):
+                    print("return 0? ")
+                    print(permco)
+                    print(sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)])
 
                 row = pd.DataFrame({
                     'sequence #': [i],

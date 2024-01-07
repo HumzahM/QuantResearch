@@ -113,23 +113,30 @@ def get_event_blocks_return_dispersion():
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
 
 
-    return first_last_pairs_array_event_months, first_last_pairs_array_time_months, normalized_trading_scaled
+    return first_last_pairs_array_event_months, first_last_pairs_array_time_months
 
 def optimize(min, max, step, return_dispersion_normalized_trading_scaled):
     MAEs = []
+    correlations = []
     for i in np.arange(min, max, step):
         print(f'N = {i}')
-        normalized_trading_scaled = optimize_helper(i)
-        #MAE = np.sqrt(np.mean((normalized_trading_scaled - return_dispersion_normalized_trading_scaled) ** 2))
+        normalized_trading_scaled = optimize_helper(i, 1990, 2019)
         MAE = np.mean(np.abs(normalized_trading_scaled - return_dispersion_normalized_trading_scaled))
         MAEs.append(MAE)
+        correlations.append(np.corrcoef(normalized_trading_scaled, return_dispersion_normalized_trading_scaled)[0, 1])
     plt.figure()
     plt.plot(np.arange(min, max, step), MAEs)
     plt.xlabel('N')
     plt.ylabel('MAE')
     plt.title(f'MAE vs N')
     plt.savefig("MAE vs N (RD as Variance - Bid-Ask Spread))")
+    plt.figure()
+    plt.plot(np.arange(min, max, step), correlations)
+    plt.xlabel('N')
+    plt.ylabel('Correlation')
+    plt.title(f'Correlation vs N')
+    plt.savefig("Correlation vs N (RD as Variance - Bid-Ask Spread))")
 
-_, _, return_dispersion_normalized_trading_scaled_ = get_event_blocks_return_dispersion()
+# _, _, return_dispersion_normalized_trading_scaled_ = get_event_blocks_return_dispersion()
 
-#optimize(250, 5000, 50, return_dispersion_normalized_trading_scaled_)
+# optimize(250, 5000, 50, return_dispersion_normalized_trading_scaled_)

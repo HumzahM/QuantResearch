@@ -1,3 +1,5 @@
+""" THERE IS AN ISSUE WITH HOW THIS CALCULATES SP RETURNS. DO NOT USE THIS FUNCTION. """
+
 import pandas as pd
 from numpy import log
 from tqdm import tqdm  # for progress bar
@@ -19,6 +21,10 @@ def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data
     spr_returns_list = []
 
     unique_permcos = stock_data['permco'].unique()
+
+    stock_data['market_cap'].ffill(inplace=True)
+    stock_data['market_cap'].bfill(inplace=True)
+    stock_data['market_cap'].fillna(1, inplace=True)
 
     for permco in tqdm(unique_permcos, desc="Processing companies"):  # Progress bar
         stock_data_permco = stock_data[stock_data['permco'] == permco]
@@ -56,7 +62,7 @@ def better_calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data
                         'permco': permco, 
                         'equity_returns': monthly_return, 
                         'sp500_return': sp500_return,
-                        'market_cap': filtered_stock_data['market_cap'].fillna(1).mean()
+                        'market_cap': filtered_stock_data['market_cap'].iloc[0] 
                     }
                     final_results_list.append(row)
 

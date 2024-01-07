@@ -57,11 +57,11 @@ def symmetric_smoothing(series, window, method='average'):
 
     return results
 
-def get_event_month_blocks(window_size):
-    start_date_data = '1985-01-01'
-    start_date = '1990-01-01'
-    end_date_data = '2022-12-30'
-    end_date = '2017-12-31'
+def get_event_month_blocks(window_size, start_year, end_year):
+    start_date_data = f'{start_year-5}-01-01'
+    start_date = f'{start_year}-01-01'
+    end_date_data = f'{end_year+5}-12-31'
+    end_date = f'{end_year}-12-31'
 
     STOCK_NAME = "Market"
 
@@ -90,12 +90,12 @@ def get_event_month_blocks(window_size):
     data = data[data['date'] <= end_date]
     data = data[data['date'] >= start_date].reset_index(drop=True)
 
-    plt.plot(data[['trading moving average']], color='red', label='Front and Back Mean Using Log')
-    plt.plot(data[['trading moving average no log']], color='yellow', label='Front and Back Mean Not Using Log')
+    plt.plot(np.log(data[['trading moving average']]), color='red', label='Front and Back Mean Using Log')
     plt.legend()
     y_data = data['monthly avg trade']
     x_data = np.arange(1, y_data.shape[0]+1, 1).reshape(-1,1)
-    plt.scatter(x_data, y_data)
+    plt.scatter(x_data, np.log(y_data))
+    plt.title("Log Number of Trades vs Time")
     plt.savefig("trades.png")
 
     y_data = data['monthly avg trade']
@@ -154,7 +154,7 @@ def get_event_month_blocks(window_size):
     event_month_lengths[-1] = num_events*normalized_days_per_month - np.sum(event_month_lengths[:-1])
     first_last_pairs_array_event_months = np.empty(num_events, dtype=object)
     first_last_pairs_time_months = []
-
+    month_lengths = []
     for month in data['month'].unique():
         # Filtering the data for the current month
         monthly_data = data[data['date'].dt.to_period('M') == month]
@@ -164,6 +164,8 @@ def get_event_month_blocks(window_size):
         last_date = monthly_data['date'].iloc[-1].strftime('%Y-%m-%d')
         #first_date = monthly_data['date'].iloc[0]
         #last_date = monthly_data['date'].iloc[-1]
+
+        month_lengths.append(len(monthly_data))
 
         # Adding the pair to the list
         first_last_pairs_time_months.append([first_date, last_date])
@@ -180,18 +182,28 @@ def get_event_month_blocks(window_size):
         # Storing the pair in the array
         first_last_pairs_array_event_months[i] = [first_date, last_date]
     
-    
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
+
+    _, bins, _  = plt.hist(event_month_lengths, bins=20,  histtype=u'step', label="Event Months Lengths")
+    plt.hist(month_lengths, bins=bins, histtype=u'step', label="Calendar Month Lengths")
+
+    plt.legend()
+    plt.title("Lengths of 'Months' Event and Calendar Time (Trading Days)")
+    plt.axis([0, 50, 0, 200])
+    plt.savefig("month lengths")
+
+    plt.figure()
+    plt.plot(event_month_lengths)
+    plt.savefig("event month lengths line")
     
     return first_last_pairs_array_event_months, first_last_pairs_array_time_months
 
-def optimize_helper(window_size):
-    start_date_data = '1987-01-01'
-    start_date = '1990-01-01'
-    end_date_data = '2021-12-30'
-    end_date = '2019-12-31'
-
+def optimize_helper(window_size, start_year, end_year):
+    start_date_data = f'{start_year-1}-01-01'
+    start_date = f'{start_year}-01-01'
+    end_date_data = f'{end_year+1}-12-31'
+    end_date = f'{end_year}-12-31'
     STOCK_NAME = "Market"
 
     sql_query = f"""
@@ -217,7 +229,6 @@ def optimize_helper(window_size):
 
     data = data[data['date'] <= end_date]
     data = data[data['date'] >= start_date].reset_index(drop=True)
-
 
     trading_moving_average_with_log = (data['total daily trades'] / data['trading moving average']).to_numpy()
 
