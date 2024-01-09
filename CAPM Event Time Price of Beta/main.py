@@ -11,6 +11,7 @@ from scipy.stats import ttest_ind
 import warnings
 warnings.filterwarnings('ignore') # :) 
 from tqdm import tqdm
+from sklearn.metrics import r2_score
 
 import sys
 from pathlib import Path
@@ -104,8 +105,8 @@ def calculate_price_of_betas(monthly_returns):
         data_seq = monthly_returns[monthly_returns['sequence #'] == seq]
         data_seq1 = data_seq[(data_seq['type'] == 1) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
         data_seq2 = data_seq[(data_seq['type'] == 2) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
-        price_of_beta1.append(calculate_weighted_beta(data_seq1['equity_returns'], data_seq1['beta'], data_seq1['market_cap']))
-        price_of_beta2.append(calculate_weighted_beta(data_seq2['equity_returns'], data_seq2['beta'], data_seq2['market_cap']))
+        price_of_beta1.append(r2_score(data_seq1['equity_returns'], data_seq1['beta'], data_seq1['market_cap']))
+        price_of_beta2.append(r2_score(data_seq2['equity_returns'], data_seq2['beta'], data_seq2['market_cap']))
 
     # Plotting and t-test
     price_of_beta1 = np.array(price_of_beta1)

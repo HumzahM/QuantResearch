@@ -26,7 +26,7 @@ def day_return_dispersion(returns, market_caps, spreads):
     #equity_return_dispersion = np.sqrt(weighted_variance)
     equity_return_dispersion = weighted_variance
 
-    final = equity_return_dispersion - np.mean(spreads ** 2) / 4
+    final = equity_return_dispersion - np.average(spreads ** 2, weights=market_caps) / 4
 
     if(final < 0):
         final = 0

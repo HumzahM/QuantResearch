@@ -57,7 +57,7 @@ def symmetric_smoothing(series, window, method='average'):
 
     return results
 
-def get_event_month_blocks(window_size, start_year, end_year):
+def get_event_month_blocks(window_size, start_year, end_year, return_extra_data=False):
     start_date_data = f'{start_year-5}-01-01'
     start_date = f'{start_year}-01-01'
     end_date_data = f'{end_year+5}-12-31'
@@ -196,8 +196,12 @@ def get_event_month_blocks(window_size, start_year, end_year):
     plt.figure()
     plt.plot(event_month_lengths)
     plt.savefig("event month lengths line")
+
+    if not return_extra_data:
+        return first_last_pairs_array_event_months, first_last_pairs_array_time_months
     
-    return first_last_pairs_array_event_months, first_last_pairs_array_time_months
+    else:
+        return first_last_pairs_array_event_months, first_last_pairs_array_time_months, event_month_lengths, month_lengths
 
 def optimize_helper(window_size, start_year, end_year):
     start_date_data = f'{start_year-1}-01-01'

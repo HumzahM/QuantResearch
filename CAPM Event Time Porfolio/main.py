@@ -58,8 +58,8 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
             data_range1 = data_subset[data_subset['type'] == 1]
             data_range2 = data_subset[data_subset['type'] == 2]
             # Sort by 'permco'
-            sorted_data1 = data_range1.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 72)
-            sorted_data2 = data_range2.sort_values(by=['permco', 'sequence #']).groupby('permco').filter(lambda x: len(x) == 72)
+            sorted_data1 = data_range1.groupby('permco').filter(lambda x: len(x) == 72).sort_values(by=['permco', 'sequence #'])
+            sorted_data2 = data_range2.groupby('permco').filter(lambda x: len(x) == 72).sort_values(by=['permco', 'sequence #'])
 
             # Group by 'permco' again and calculate the beta for each group
             betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
@@ -277,6 +277,3 @@ try:
 
 except Exception as e:
     print(f"An error occurred: {e}")
-
-
-

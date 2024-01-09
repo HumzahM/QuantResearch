@@ -9,6 +9,8 @@ window_size = 2520
 start_year = 1990
 end_year = 2019
 n_stocks = 500
+start_date = f'{start_year}-01-01'
+end_date = f'{end_year}-12-31'
 
 # Directory for storing pickle files
 data_directory = 'data'
@@ -35,15 +37,11 @@ from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
 
 """Make sure that the configuration (+- edges) matches the one used to generate the data"""
-start_year = 1990
-end_year = 2019
-start_date = f'{start_year}-01-01'
-end_date = f'{end_year}-12-31'
 
-first_analysis_date = '2000-01-01'
-last_analysis_date = '2002-06-31'
+# first_analysis_date = '2000-01-01'
+# last_analysis_date = '2002-06-31'
 
-Name = "Dotcom"
+# Name = "Dotcom"
 
 event_months, months = get_event_month_blocks(window_size, start_year, end_year)
 
@@ -59,27 +57,24 @@ def get_dates(sequence_num, type_num):
 # Assuming your dataframe is named monthly_returns
 monthly_returns['start_date'], monthly_returns['end_date'] = zip(*monthly_returns.apply(lambda row: get_dates(row['sequence #'], row['type']), axis=1))
 
-monthly_returns = monthly_returns[(monthly_returns['start_date'] >= first_analysis_date) & (monthly_returns['end_date'] <= last_analysis_date)]
+#monthly_returns = monthly_returns[(monthly_returns['start_date'] >= first_analysis_date) & (monthly_returns['end_date'] <= last_analysis_date)]
 
 # Selecting only the required columns
-selected_data = monthly_returns[['type', 'sequence #', 'sp500_return', 'start_date', 'end_date']]
+unique_data = monthly_returns[['type', 'sequence #', 'sp500_return', 'start_date', 'end_date']].drop_duplicates()
 
-# Dropping duplicate rows
-unique_data = selected_data.drop_duplicates()
-#unique_data.sort_values(by='sp500_return', inplace=True)
+# Save unique_data as a CSV file
+unique_data.to_csv('unique_data1000.csv', index=False)
 
-# Now, you can save this filtered and unique data to a new file
-plt.figure()
-import matplotlib.ticker as mtick
+# _, bins, _ = plt.hist(unique_data[unique_data['type'] == 2]['sp500_return'], bins=10, histtype=u'step', label="Event Months", density=True)
+# plt.hist(unique_data[unique_data['type'] == 1]['sp500_return'], bins=bins,  histtype=u'step', label="Time Months", density=True)
+# plt.legend()
+# plt.ylabel("# Months (Adjusted)")
 
-_, bins, _ = plt.hist(unique_data[unique_data['type'] == 2]['sp500_return'], bins=10, histtype=u'step', label="Event Months", density=True)
-plt.hist(unique_data[unique_data['type'] == 1]['sp500_return'], bins=bins,  histtype=u'step', label="Time Months", density=True)
-plt.legend()
-plt.ylabel("# Months (Adjusted)")
+# plt.xlabel("Return (Log)")
+# plt.title(f"{Name} {start_date}->{end_date} \n {len(unique_data[unique_data['type'] == 1])} months and {len(unique_data[unique_data['type'] == 2])} event months")
+# plt.savefig(f"{Name}.png")
 
-plt.xlabel("Return (Log)")
-plt.title(f"{Name} {start_date}->{end_date} \n {len(unique_data[unique_data['type'] == 1])} months and {len(unique_data[unique_data['type'] == 2])} event months")
-plt.savefig(f"{Name}.png")
+
 
 
 
