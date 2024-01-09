@@ -152,7 +152,7 @@ def get_event_month_blocks(window_size, start_year, end_year, return_extra_data=
     #last one is end 
     new_blocks[-1] = normalized_trading_scaled.size-1
     event_month_lengths[-1] = num_events*normalized_days_per_month - np.sum(event_month_lengths[:-1])
-    first_last_pairs_array_event_months = np.empty(num_events, dtype=object)
+    first_last_pairs_array_event_months = []
     first_last_pairs_time_months = []
     month_lengths = []
     for month in data['month'].unique():
@@ -180,10 +180,11 @@ def get_event_month_blocks(window_size, start_year, end_year, return_extra_data=
         last_date = data['date'][new_blocks[i]] if i < num_events - 1 else data['date'].iloc[-1]
 
         # Storing the pair in the array
-        first_last_pairs_array_event_months[i] = [first_date, last_date]
+        first_last_pairs_array_event_months.append([first_date, last_date])
     
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
+    first_last_pairs_array_event_months = np.array(first_last_pairs_array_event_months)
 
     _, bins, _  = plt.hist(event_month_lengths, bins=20,  histtype=u'step', label="Event Months Lengths")
     plt.hist(month_lengths, bins=bins, histtype=u'step', label="Calendar Month Lengths")

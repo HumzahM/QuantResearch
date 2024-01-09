@@ -4,6 +4,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 from scipy.stats import skew, kurtosis
+import numpy as np
 # Add the parent directory to sys.path to allow for package imports
 parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
@@ -21,6 +22,10 @@ os.makedirs(data_directory, exist_ok=True)
 returns2520 = pickle.load(open(f'{data_directory}/2520_500_1990_2019_monthly_returns.pickle', 'rb'))
 
 event_months, time_months, event_month_lengths, time_month_lengths = get_event_month_blocks(2520, 1990, 2019, return_extra_data=True)
+
+print(event_months)
+print(time_months)
+
 
 monthly_returns = returns2520[['type', 'sequence #', 'sp500_return']].drop_duplicates().reset_index(drop=True)
 

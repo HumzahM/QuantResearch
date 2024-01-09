@@ -27,10 +27,7 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
                 filtered_stock_data1 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start1) & (stock_data_permco['date'] <= end1)], risk_free_rate_data, on='date')
                 monthly_return1 = log((1 + filtered_stock_data1['ret'] - filtered_stock_data1['rf']).prod())
                 sp500_return1 = log((sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['ret']+1).prod())
-                if(abs(sp500_return1) < 0.0001):
-                    print("return 0? ")
-                    print(permco)
-                    print(sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)])
+
                 row = pd.DataFrame({
                     'sequence #': [i],
                     'type': [1],
@@ -47,10 +44,6 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
                 monthly_return2 = log((1 + filtered_stock_data2['ret'] - filtered_stock_data2['rf']).prod())
                 
                 sp500_return2 = log((sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['ret']+1).prod())
-                if(abs(sp500_return2) < 0.0001):
-                    print("return 0? ")
-                    print(permco)
-                    print(sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)])
 
                 row = pd.DataFrame({
                     'sequence #': [i],
@@ -58,7 +51,7 @@ def calculate_monthly_returns(stock_data, sp500_data, risk_free_rate_data, date_
                     'permco': [permco], 
                     'equity_returns': [monthly_return2], 
                     'sp500_return': [sp500_return2],
-                    'market_cap': [filtered_stock_data1['market_cap'].fillna(1).mean()]
+                    'market_cap': [filtered_stock_data2['market_cap'].fillna(1).mean()]
                 })
                 final_results = pd.concat([final_results, row], ignore_index=True)
 

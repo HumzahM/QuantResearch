@@ -11,6 +11,7 @@ import pandas as pd
 import statsmodels.api as sm
 import sys
 from pathlib import Path
+from tqdm import tqdm
 
 #Add the parent directory to sys.path to allow for package imports
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -49,18 +50,17 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     portfolio_range2 = [[] for _ in range(num_groups)]
     spreturns1 = []
     spreturns2 = []
-    for seq in unique_sequences:
+    for seq in tqdm(unique_sequences):
+       #seq += 1
         if(seq >= 72 and seq % 12 == 0):
-            print(seq)
+            #seq -= 1
             seq_range = range(seq-71, seq+1)
             data_subset = monthly_returns[monthly_returns['sequence #'].isin(seq_range)]
-
             data_range1 = data_subset[data_subset['type'] == 1]
             data_range2 = data_subset[data_subset['type'] == 2]
             # Sort by 'permco'
             sorted_data1 = data_range1.groupby('permco').filter(lambda x: len(x) == 72).sort_values(by=['permco', 'sequence #'])
             sorted_data2 = data_range2.groupby('permco').filter(lambda x: len(x) == 72).sort_values(by=['permco', 'sequence #'])
-
             # Group by 'permco' again and calculate the beta for each group
             betas1 = sorted_data1.groupby('permco').apply(lambda x: calculate_beta_force(x['equity_returns'][0:60], x['sp500_return'][0:60]))
             returns1 = sorted_data1.groupby('permco').apply(lambda x: np.log((1+x['equity_returns'][60:]).prod()))
@@ -130,7 +130,7 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
     plt.scatter(betas3, means3, color='green')
     plt.xlabel('Beta')
     plt.ylabel('Mean Return')
-    plt.title(f'Beta vs Mean Return (Blue is Normal Months, Red is Event Months) \n Betas are {calculate_beta(means1, betas1)} and {calculate_beta(means2, betas2)}')
+    plt.title(f'Beta vs Mean Return (Blue is Normal Months, Red is Event Months) \n Betas are {round(calculate_beta(means1, betas1),4)} and {round(calculate_beta(means2, betas2),4)}')
     plt.savefig("beta_vs_mean_return.png")
 
     # Create a dictionary with the variables
