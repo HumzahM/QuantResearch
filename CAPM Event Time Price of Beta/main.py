@@ -25,7 +25,6 @@ from Helper_Functions.advanced_fetch_stock_data import advanced_fetch_stock_data
 from Helper_Functions.calculate_monthly_returns import calculate_monthly_returns
 from Helper_Functions.better_calculate_monthly_returns import better_calculate_monthly_returns
 
-#for just the pure beta without forcing intercept to be 0
 def calculate_beta(y, x):
     y = np.array(y)
     x = np.array(x)
@@ -34,11 +33,6 @@ def calculate_beta(y, x):
     variance = np.var(x)
     beta = covariance / variance
     return beta
-
-#for when theory suggests that intercept should be 0
-
-def calculate_beta_force(y, x):
-    return sm.OLS(y, x).fit().params[0]
 
 import statsmodels.api as sm
 import numpy as np
@@ -65,9 +59,11 @@ def calculate_weighted_beta(y, x, weights):
 
     # # Fit the weighted least squares model
     model = sm.WLS(y, x_with_intercept, weights=scaled_weights).fit()
+    #model = sm.WLS(y, x, weights=scaled_weights).fit()
 
     # # Return the intercept and beta (slope)
     intercept, beta = model.params
+    #beta = model.params
 
     return beta
 
@@ -90,7 +86,7 @@ def calculate_betas(monthly_returns):
                     if i >= 60:
                         y = block['equity_returns'].iloc[i-60:i]
                         x = block['sp500_return'].iloc[i-60:i]
-                        beta = calculate_beta_force(y, x)
+                        beta = calculate_beta(y, x)
                         monthly_returns.loc[block.index[i], 'beta'] = beta
 
     return monthly_returns
@@ -103,10 +99,10 @@ def calculate_price_of_betas(monthly_returns):
 
     for seq in tqdm(unique_sequences):
         data_seq = monthly_returns[monthly_returns['sequence #'] == seq]
-        data_seq1 = data_seq[(data_seq['type'] == 1) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
-        data_seq2 = data_seq[(data_seq['type'] == 2) & (data_seq['market_cap'].notnull())].sort_values(by='permco')
-        price_of_beta1.append(r2_score(data_seq1['equity_returns'], data_seq1['beta'], data_seq1['market_cap']))
-        price_of_beta2.append(r2_score(data_seq2['equity_returns'], data_seq2['beta'], data_seq2['market_cap']))
+        data_seq1 = data_seq[(data_seq['type'] == 1) & (data_seq['market_cap'].notnull())]
+        data_seq2 = data_seq[(data_seq['type'] == 2) & (data_seq['market_cap'].notnull())]
+        price_of_beta1.append(calculate_weighted_beta(data_seq1['equity_returns'], data_seq1['beta'], data_seq1['market_cap']))
+        price_of_beta2.append(calculate_weighted_beta(data_seq2['equity_returns'], data_seq2['beta'], data_seq2['market_cap']))
 
     # Plotting and t-test
     price_of_beta1 = np.array(price_of_beta1)

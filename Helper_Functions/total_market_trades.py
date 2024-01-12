@@ -58,9 +58,9 @@ def symmetric_smoothing(series, window, method='average'):
     return results
 
 def get_event_month_blocks(window_size, start_year, end_year, return_extra_data=False):
-    start_date_data = f'{start_year-5}-01-01'
+    start_date_data = f'{start_year-3}-01-01'
     start_date = f'{start_year}-01-01'
-    end_date_data = f'{end_year+5}-12-31'
+    end_date_data = f'{end_year+3}-12-31'
     end_date = f'{end_year}-12-31'
 
     STOCK_NAME = "Market"
