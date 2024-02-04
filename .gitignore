@@ -2,3 +2,4 @@
 *.pickle
 !/Backups/data/2520_500_1990_2019_monthly_returns.pickle
 !/Backups/data/2520_500_1990_2019_spr_returns.pickle
+!/CAPM Event Time Fama French/data/*
