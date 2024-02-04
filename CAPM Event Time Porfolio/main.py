@@ -63,12 +63,12 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
             #returns1 = sorted_data1.groupby('permco').apply(lambda x: np.log((1+x['equity_returns'][60:]).prod()))
             returns1 = sorted_data1.groupby('permco').apply(lambda x: (1+x['equity_returns'][60:]).prod())
             returns1.fillna(0, inplace=True)
-            #returns1 = returns1.apply(lambda x: -1 if x < -1 else x)
+            returns1 = returns1.apply(lambda x: 0 if x < 0 else x)
             betas2 = sorted_data2.groupby('permco').apply(lambda x: calculate_beta(x['equity_returns'][0:60], x['sp500_return'][0:60]))
-            #returns2 = sorted_data2.groupby('permco').apply(lambda x: np.log((1+x['equity_returns'][60:]).prod()))
+            returns2 = sorted_data2.groupby('permco').apply(lambda x: np.log((1+x['equity_returns'][60:]).prod()))
             returns2 = sorted_data2.groupby('permco').apply(lambda x: (1+x['equity_returns'][60:]).prod())
             returns2.fillna(0, inplace=True)
-            #returns2 = returns2.apply(lambda x: -1 if x < -1 else x)
+            returns2 = returns2.apply(lambda x: 0 if x < 0 else x)
             market_caps1 = sorted_data1.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:61]))
             adjusted_caps1 = market_caps1 / np.sum(market_caps1)
             market_caps2 = sorted_data2.groupby('permco').apply(lambda x: np.mean(x['market_cap'][60:61]))
@@ -88,6 +88,10 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
             for i in range(num_groups):
                 group1_indices = betas1_grouped[betas1_grouped == i].index
                 group2_indices = betas2_grouped[betas2_grouped == i].index
+                if(i == 9 and seq == 72):
+                    print(returns2[group2_indices])
+                    print(betas2[group2_indices])
+                    print(market_caps2[group2_indices])
                 portfolio_range1[i].append(np.log(np.average(returns1[group1_indices], weights=market_caps1[group1_indices])))
                 portfolio_range2[i].append(np.log(np.average(returns2[group2_indices], weights=market_caps2[group2_indices])))
 
@@ -123,6 +127,7 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
         means2.append(np.average(point))
         skews2.append(skew(point))
         kurtosis2.append(kurtosis(point))
+        print(point)
 
     betas3, betas4 = [], []
     betas3.append(1)
@@ -211,7 +216,7 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
         plt.plot(point, label=f'Beta {round(betas1[counter], 2)}', color=color)
         counter += 1 
     plt.plot(spreturns1, label="SP500 Returns", color='black', linewidth=2.5)
-    plt.plot(market_returns1, label="Market Returns", color='grey', linewidth=2.5)
+    plt.plot(market_returns1, label="Sample Returns", color='grey', linewidth=2.5)
     plt.legend()
     plt.title("Portfolio Returns for Range 1")
     plt.savefig("portfolio_returns1.png")
@@ -223,7 +228,7 @@ def calculate_betas_and_portfolio_returns(monthly_returns, spr_returns):
         plt.plot(point, label=f'Beta {round(betas2[counter], 2)}', color=color)
         counter += 1
     plt.plot(spreturns2, label="SP500 Returns", color='black', linewidth=2.5)
-    plt.plot(market_returns2, label="Market Returns", color='grey', linewidth=2.5)
+    plt.plot(market_returns2, label="Sample Returns", color='grey', linewidth=2.5)
     plt.legend()
     plt.title("Portfolio Returns for Range 2")
     plt.savefig("portfolio_returns2.png")

@@ -32,13 +32,15 @@ def calculate_monthly_returns(stock_data, date_ranges1, date_ranges2, calculate_
         permco_dates = stock_data_permco['date']  
         first_date_permco = permco_dates.min()
         last_date_permco = permco_dates.max()
+        
 
         for i, (start1, end1) in enumerate(date_ranges1):
             if start1 >= first_date_permco and end1 <= last_date_permco and start1 in stock_data_permco['date'].values and end1 in stock_data_permco['date'].values:
                 filtered_stock_data1 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start1) & (stock_data_permco['date'] <= end1)], risk_free_rate_data, on='date')
+                filtered_stock_data1 = filtered_stock_data1.sort_values('market_cap', ascending=False).drop_duplicates('date')
                 monthly_return1 = log((1 + filtered_stock_data1['ret'] - filtered_stock_data1['rf']).prod())
                 sp500_return1 = log((sp500_data[(sp500_data['date'] >= start1) & (sp500_data['date'] <= end1)]['ret']+1).prod())
-
+                
                 row = pd.DataFrame({
                     'sequence #': [i],
                     'type': [1],
@@ -52,6 +54,7 @@ def calculate_monthly_returns(stock_data, date_ranges1, date_ranges2, calculate_
         for i, (start2, end2) in enumerate(date_ranges2):
             if start2 >= first_date_permco and end2 <= last_date_permco and start2 in stock_data_permco['date'].values and end2 in stock_data_permco['date'].values:
                 filtered_stock_data2 = pd.merge(stock_data_permco[(stock_data_permco['date'] >= start2) & (stock_data_permco['date'] <= end2)], risk_free_rate_data, on='date')
+                filtered_stock_data2 = filtered_stock_data2.sort_values('market_cap', ascending=False).drop_duplicates('date')
                 monthly_return2 = log((1 + filtered_stock_data2['ret'] - filtered_stock_data2['rf']).prod())
                 sp500_return2 = log((sp500_data[(sp500_data['date'] >= start2) & (sp500_data['date'] <= end2)]['ret']+1).prod())
 

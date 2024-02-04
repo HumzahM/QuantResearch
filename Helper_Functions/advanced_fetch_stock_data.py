@@ -44,14 +44,9 @@ def advanced_fetch_stock_data(start_year, end_year, n_stocks):
             FROM (
                 SELECT 
                     permco,
-                    RANK() OVER (ORDER BY AVG(ABS(shrout * prc)) DESC) as cap_rank
+                    RANK() OVER (ORDER BY avg_market_cap DESC) as cap_rank
                 FROM 
-                    crsp.dsf
-                WHERE 
-                    date >= '{start_date}' AND date <= '{end_date}'
-                    AND prc IS NOT NULL
-                    AND shrout IS NOT NULL
-                GROUP BY permco
+                    StockAverageMarketCap
             ) as Ranked
             WHERE 
                 cap_rank <= '{n_stocks}'
@@ -68,7 +63,7 @@ def advanced_fetch_stock_data(start_year, end_year, n_stocks):
             Top500Stocks ON dsf.permco = Top500Stocks.permco
         WHERE 
             dsf.date >= '{start_date}' AND dsf.date <= '{end_date}'
-        """
+"""
         result = db.raw_sql(query)
         data = pd.concat([data, result])
     
