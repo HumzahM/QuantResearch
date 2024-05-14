@@ -117,10 +117,11 @@ def symmetric_smoothing(arr, window_size):
         smoothed[i] = np.mean(window)
     return smoothed
 
-#Input: Start_Year (int), End_Year (int)
+#Input: Start_Year (int), End_Year (int), n_stocks (int), window_size (int)
+#N stocks is just a formality so it knows what folder to save the data in
 #Output: Two arrays of tuples, each tuple containing the first and last date of the month
 
-def get_event_month_blocks(window_size, start_year, end_year, n_stocks):
+def get_event_month_blocks(window_size, start_year, end_year, n_stocks, overwrite=False):
     start_date_data = f'{start_year-5}-01-01'
     start_date = f'{start_year}-01-01'
     end_date_data = f'{end_year+5}-12-31'
@@ -134,7 +135,7 @@ def get_event_month_blocks(window_size, start_year, end_year, n_stocks):
     ORDER BY date;
     """
 
-    if os.path.exists(f'data/{n_stocks}_{start_year}_{end_year}/event_and_calendar_months.pickle'):
+    if os.path.exists(f'data/{n_stocks}_{start_year}_{end_year}/event_and_calendar_months.pickle') and not overwrite:
         with open(f'data/{n_stocks}_{start_year}_{end_year}/event_and_calendar_months.pickle', 'rb') as f:
             data = pickle.load(f)
             return data['event_months'], data['calendar_months']
@@ -144,14 +145,27 @@ def get_event_month_blocks(window_size, start_year, end_year, n_stocks):
 
     #some trading days had 0, 1, or NaN, either bugs or not they mess stuff up
     data["total daily trades"].ffill(inplace=True)
-    data = data[data["total daily trades"] > 1]
+    data["total daily trades"].fillna(value=1000, inplace=True)
 
     data['month'] = data['date'].dt.strftime('%Y-%m')
 
     # Applying the function to a single column of the DataFrame
     #data['trading log moving average'] = np.exp(symmetric_smoothing(np.log(data['total daily trades']), window_size))
+    os.makedirs(f'figs/{n_stocks}_{start_year}_{end_year}', exist_ok=True)
     data['trading log moving average'] = symmetric_smoothing(np.log(data['total daily trades']), window_size)
-
+    plt.plot(np.log(data['total daily trades']))
+    plt.plot(data['trading log moving average'])
+    plt.savefig(f'figs/{n_stocks}_{start_year}_{end_year}/trading_log_moving_average_{window_size}.png')
+    plt.figure()
+    data['month'] = data['date'].dt.strftime('%Y-%m')
+    monthly_avg_trades = data.groupby("month")['total daily trades'].transform('mean').drop_duplicates().reset_index(drop=True)
+    unique_months = data['month'].drop_duplicates().reset_index(drop=True)
+    plt.plot(unique_months, monthly_avg_trades)
+    step_size = len(unique_months) // 7  # Adjust this number based on your preference
+    plt.xticks(unique_months[::step_size])  # Set x-ticks at an interval of step_size
+    plt.ylim(0, 1.1 * monthly_avg_trades.max())
+    plt.title("Monthly Average Trades on NASDAQ")
+    plt.savefig(f'figs/{n_stocks}_{start_year}_{end_year}/monthly_avg_trade.png')
     data = data[(data['date'] <= end_date) & (data['date'] >= start_date)]
 
     # Check for -1 values in the smoothed data
@@ -195,10 +209,10 @@ def get_event_month_blocks(window_size, start_year, end_year, n_stocks):
     # Converting the list of pairs to a 2D numpy array
     first_last_pairs_array_time_months = np.array(first_last_pairs_time_months)
     first_last_pairs_array_event_months = np.array(first_last_pairs_array_event_months)
-
+    os.makedirs(f'data/{n_stocks}_{start_year}_{end_year}', exist_ok=True)
     with open(f'data/{n_stocks}_{start_year}_{end_year}/event_and_calendar_months.pickle', 'wb') as f:
         pickle.dump({'event_months': first_last_pairs_array_event_months, 'calendar_months': first_last_pairs_array_time_months}, f)
 
     return first_last_pairs_array_event_months, first_last_pairs_array_time_months
 
-get_event_month_blocks(2400, 1990, 2019, 500)
+get_event_month_blocks(2000, 2007, 2008, 500, overwrite=True)
