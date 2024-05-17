@@ -65,13 +65,20 @@ def get_event_month_blocks(window_size, start_year, end_year, return_extra_data=
 
     STOCK_NAME = "Market"
 
+    # sql_query = f"""
+    # SELECT date, SUM(NUMTRD) AS "total daily trades" 
+    # FROM crsp.dsf
+    # WHERE date BETWEEN '{start_date_data}' AND '{end_date_data}'
+    # GROUP BY date
+    # ORDER BY date;
+    # """
     sql_query = f"""
-    SELECT date, SUM(NUMTRD) AS "total daily trades" 
-    FROM crsp.dsf
-    WHERE date BETWEEN '{start_date_data}' AND '{end_date_data}'
-    GROUP BY date
-    ORDER BY date;
-    """
+        SELECT date, SUM(VOL) AS "total daily trades" 
+        FROM crsp.dsf
+        WHERE date BETWEEN '{start_date_data}' AND '{end_date_data}'
+        GROUP BY date
+        ORDER BY date;
+        """
 
     data = run_or_load_query(sql_query)
 

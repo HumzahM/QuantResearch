@@ -69,6 +69,7 @@ def calculate_weighted_beta(y, x, weights):
 
 
 def calculate_betas(monthly_returns):
+    print(monthly_returns)
     unique_permcos = monthly_returns['permco'].unique()
     monthly_returns['beta'] = np.nan
 
@@ -92,10 +93,8 @@ def calculate_betas(monthly_returns):
     return monthly_returns
 
 def calculate_price_of_betas(monthly_returns):
-    print(monthly_returns)
     monthly_returns['market_cap'].fillna(0, inplace=True)
     monthly_returns = monthly_returns[monthly_returns['beta'].notna()]
-    print(monthly_returns)
     unique_sequences = monthly_returns['sequence #'].unique()
     price_of_beta1, price_of_beta2 = [], []
 
@@ -135,7 +134,7 @@ print("running")
 window_size = 2520
 start_year = 1990
 end_year = 2019
-n_stocks = 500
+n_stocks = 15
 start_date = f'{start_year}-01-01'
 end_date = f'{end_year}-12-31'
 
@@ -147,8 +146,8 @@ market_returns = market_returns.merge(risk_free, left_on='date', right_on='date'
 market_returns['ret'] = market_returns['vwretd'] - market_returns['rf']
 
 # Rerun flag
-rerunMonthlyReturns = False
-rerunBetaCalc = False
+rerunMonthlyReturns = True
+rerunBetaCalc = True
 
 if(rerunMonthlyReturns):
     rerunBetaCalc = True
@@ -165,13 +164,14 @@ try:
     if rerunMonthlyReturns or not (os.path.exists(monthly_returns_filename) and os.path.exists(spr_returns_filename)):
         print("re-running everything")
 
-        event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size)
+        event_month_ranges, monthly_day_ranges = get_event_month_blocks(window_size=window_size, start_year=start_year, end_year=end_year)
         print("ranges calculated")
-
+        print(event_month_ranges)
+        print(monthly_day_ranges)
         stocks = advanced_fetch_stock_data(start_year, end_year, n_stocks)
         print("stocks fetched")
-
-        monthly_returns, spr_returns = calculate_monthly_returns(stocks, market_returns, risk_free, monthly_day_ranges, event_month_ranges)
+        print(stocks)
+        monthly_returns, spr_returns = calculate_monthly_returns(stocks, monthly_day_ranges, event_month_ranges)
         print("monthly returns calculated")
 
         with open(monthly_returns_filename, 'wb') as f:
@@ -193,6 +193,8 @@ betad_monthly_returns_filename = os.path.join(data_directory, f'{window_size}_{n
 
 if rerunBetaCalc or not os.path.exists(betad_monthly_returns_filename):
     betad_monthly_returns = calculate_betas(monthly_returns)
+    print("Betad returns calculated")
+    print(betad_monthly_returns)
     with open(betad_monthly_returns_filename, 'wb') as f:
         pickle.dump(betad_monthly_returns, f)
 else:
